@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Real-time pitch detection and visualization tool for musicians">
+    <meta name="theme-color" content="#1a1a2e">
+
+    <title>PitchWiz - Real-time Pitch Detection</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18V5l12-2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="2" />
+                    <circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <h1>PitchWiz</h1>
+            </div>
+            <button class="settings-btn" id="settingsBtn" aria-label="Settings">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                    <path d="M12 1v6m0 6v10M1 12h6m6 0h10" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" />
+                </svg>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Current Note Display -->
+            <div class="note-display" id="noteDisplay">
+                <div class="note-name" id="noteName">--</div>
+                <div class="octave" id="octave"></div>
+                <div class="frequency" id="frequency">-- Hz</div>
+                <div class="cents-indicator">
+                    <div class="cents-bar">
+                        <div class="cents-marker" id="centsMarker"></div>
+                        <div class="cents-center"></div>
+                    </div>
+                    <div class="cents-value" id="centsValue">0¢</div>
+                </div>
+            </div>
+
+            <!-- Visualization Canvas -->
+            <div class="visualization-container">
+                <canvas id="visualizationCanvas"></canvas>
+                <div class="canvas-overlay">
+                    <div class="grid-lines"></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button class="control-btn primary" id="startBtn">
+                    <svg class="icon-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2" />
+                        <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3m-4 0h8" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
+                    </svg>
+                    <span>Start Listening</span>
+                </button>
+
+                <div class="mode-toggle">
+                    <button class="mode-btn active" data-mode="pitch-diagram">Pitch Diagram</button>
+                    <button class="mode-btn" data-mode="spectrogram">Spectrogram</button>
+                    <button class="mode-btn" data-mode="tuner">Tuner</button>
+                </div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="info-panel">
+                <div class="info-item">
+                    <span class="info-label">A4 Reference</span>
+                    <span class="info-value" id="a4Reference">440 Hz</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Detected</span>
+                    <span class="info-value" id="detectionStatus">Waiting...</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button class="close-btn" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="a4Frequency">A4 Reference Frequency</label>
+                        <input type="number" id="a4Frequency" value="440" min="430" max="450" step="1">
+                        <span class="setting-hint">Standard: 440 Hz</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="smoothing">Smoothing</label>
+                        <input type="range" id="smoothing" min="0" max="100" value="70">
+                        <span class="setting-hint">Reduce noise in detection</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="pitch-detector.js"></script>
+    <script src="visualizer.js"></script>
+    <script src="app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
+            });
+        }
+    </script>
+</body>
+
+</html>
