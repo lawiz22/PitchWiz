@@ -292,6 +292,26 @@ body {
     pointer-events: none;
 }
 
+/* Zoom Hint */
+.zoom-hint {
+    position: absolute;
+    bottom: var(--spacing-sm);
+    right: var(--spacing-sm);
+    background: rgba(26, 26, 46, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    pointer-events: none;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    transition: opacity var(--transition-base);
+}
+
+.visualization-container:hover .zoom-hint {
+    opacity: 1;
+}
+
 /* ===== CONTROLS ===== */
 .controls {
     display: flex;
@@ -531,6 +551,72 @@ body {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
 }
+
+/* Range Selectors */
+.range-selectors {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.range-selectors select {
+    flex: 1;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.range-selectors select:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.range-selectors span {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* Mode Switch */
+.mode-switch {
+    display: flex;
+    gap: var(--spacing-xs);
+    background: var(--color-bg-tertiary);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.mode-switch-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: calc(var(--radius-sm) - 2px);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    font-family: var(--font-family);
+}
+
+.mode-switch-btn:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-switch-btn.active {
+    background: var(--color-accent-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {

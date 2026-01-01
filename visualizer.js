@@ -21,9 +21,17 @@ class Visualizer {
         this.maxSpectrogramWidth = 500;
 
         // Pitch diagram settings
-        this.minNote = 24; // C1
-        this.maxNote = 96; // C7
+        this.minNote = 24; // C1 (default)
+        this.maxNote = 72; // C5 (default)
         this.noteRange = this.maxNote - this.minNote;
+        this.detectionMode = 'on-sound'; // 'on-sound' or 'live'
+        this.zoomLevel = 1.0; // Vertical zoom: 0.5 to 3.0
+        this.verticalPan = 0; // Vertical pan offset in semitones
+        this.horizontalZoom = 1.0; // Horizontal zoom: 0.5 to 3.0
+        this.scanSpeed = 1.0; // 0.5 to 2.0
+        this.scrollOffset = 0; // For smooth scrolling
+        this.showSpectrogramNotes = true; // Show note labels on spectrogram
+
 
         // Animation
         this.animationId = null;
@@ -95,16 +103,58 @@ class Visualizer {
     }
 
     /**
+     * Set note range for pitch diagram
+     */
+    setNoteRange(minNote, maxNote) {
+        this.minNote = minNote;
+        this.maxNote = maxNote;
+        this.noteRange = this.maxNote - this.minNote;
+        this.pitchHistory = []; // Clear history to avoid rendering issues
+    }
+
+    /**
+     * Set detection mode
+     */
+    setDetectionMode(mode) {
+        this.detectionMode = mode; // 'on-sound' or 'live'
+        this.pitchHistory = []; // Clear history when switching modes
+    }
+
+    /**
+     * Set zoom level
+     */
+    setZoomLevel(zoom) {
+        this.zoomLevel = Math.max(0.5, Math.min(3.0, zoom));
+    }
+
+    /**
+     * Set horizontal zoom level
+     */
+    setHorizontalZoom(zoom) {
+        this.horizontalZoom = Math.max(0.5, Math.min(3.0, zoom));
+    }
+
+    /**
+     * Set scan speed
+     */
+    setScanSpeed(speed) {
+        this.scanSpeed = Math.max(0.5, Math.min(2.0, speed));
+    }
+
+    /**
      * Add pitch data point
      */
     addPitchData(pitchData) {
-        if (pitchData && pitchData.frequency) {
+        // In live mode, always add data (even null for silence)
+        // In on-sound mode, only add when pitch is detected
+        if (this.detectionMode === 'live' || (pitchData && pitchData.frequency)) {
             this.pitchHistory.push({
-                frequency: pitchData.frequency,
-                note: pitchData.note,
-                octave: pitchData.octave,
+                frequency: pitchData ? pitchData.frequency : null,
+                note: pitchData ? pitchData.note : null,
+                octave: pitchData ? pitchData.octave : null,
                 timestamp: Date.now()
             });
+
 
             // Keep history limited
             if (this.pitchHistory.length > this.maxHistoryLength) {
@@ -168,14 +218,25 @@ class Visualizer {
 
         // Draw pitch history
         if (this.pitchHistory.length > 1) {
-            const pointSpacing = canvasWidth / this.maxHistoryLength;
+            // Apply scan speed and horizontal zoom to point spacing
+            const baseSpacing = canvasWidth / this.maxHistoryLength;
+            const pointSpacing = baseSpacing * this.scanSpeed * this.horizontalZoom;
+
+            // Calculate scroll offset to make diagram scroll from right to left
+            const totalWidth = this.pitchHistory.length * pointSpacing;
+            const scrollOffset = Math.max(0, totalWidth - canvasWidth);
 
             for (let i = 1; i < this.pitchHistory.length; i++) {
                 const prevPoint = this.pitchHistory[i - 1];
                 const currPoint = this.pitchHistory[i];
 
-                const x1 = (i - 1) * pointSpacing;
-                const x2 = i * pointSpacing;
+                // Skip if either point is null (silence in live mode)
+                if (!prevPoint.frequency || !currPoint.frequency) {
+                    continue;
+                }
+
+                const x1 = (i - 1) * pointSpacing - scrollOffset;
+                const x2 = i * pointSpacing - scrollOffset;
 
                 const y1 = this.frequencyToY(prevPoint.frequency, canvasHeight);
                 const y2 = this.frequencyToY(currPoint.frequency, canvasHeight);
@@ -237,15 +298,10 @@ class Visualizer {
             this.ctx.lineTo(width, y);
             this.ctx.stroke();
 
-            // Draw note label for every note (or every octave if too crowded)
-            const shouldDrawLabel = (this.maxNote - this.minNote) > 36
-                ? (note % 12 === 0) // Only C notes if range > 3 octaves
-                : true; // All notes otherwise
-
-            if (shouldDrawLabel) {
-                this.ctx.fillStyle = this.colors.grid;
-                this.ctx.fillText(`${noteName}${octave}`, 45, y);
-            }
+            // Draw note label for ALL notes with their color
+            const noteColor = this.getNoteColor(noteName);
+            this.ctx.fillStyle = noteColor;
+            this.ctx.fillText(`${noteName}${octave}`, 45, y);
         }
     }
 
@@ -262,7 +318,13 @@ class Visualizer {
      * Convert MIDI note to Y coordinate
      */
     noteToY(midiNote, height) {
-        const normalizedNote = (midiNote - this.minNote) / this.noteRange;
+        // Apply zoom level and vertical pan
+        const effectiveRange = this.noteRange / this.zoomLevel;
+        const centerNote = (this.minNote + this.maxNote) / 2 + this.verticalPan;
+        const effectiveMin = centerNote - effectiveRange / 2;
+        const effectiveMax = centerNote + effectiveRange / 2;
+
+        const normalizedNote = (midiNote - effectiveMin) / (effectiveMax - effectiveMin);
         return height - (normalizedNote * height);
     }
 
@@ -310,14 +372,24 @@ class Visualizer {
         const canvasWidth = this.canvas.width / window.devicePixelRatio;
         const canvasHeight = this.canvas.height / window.devicePixelRatio;
 
-        // Draw spectrogram
+        // Draw spectrogram with zoom support
         const columnWidth = canvasWidth / this.spectrogramData.length;
-        const rowHeight = canvasHeight / bufferLength;
+
+        // Safety check - wait for audio to initialize
+        if (!this.audioContext) return;
+        const nyquist = this.audioContext.sampleRate / 2;
+
+        // Apply zoom to frequency range - zoom in = show less frequency range (more detail)
+        // Default: 1000Hz, zoom 2x = 500Hz, zoom 0.5x = 2000Hz
+        const maxFreqToShow = 1000 / this.zoomLevel;
+        const binsToShow = Math.floor((maxFreqToShow / nyquist) * bufferLength);
+        const rowHeight = canvasHeight / binsToShow;
 
         for (let x = 0; x < this.spectrogramData.length; x++) {
             const column = this.spectrogramData[x];
 
-            for (let y = 0; y < column.length; y++) {
+            // Only draw frequency bins up to maxFreqToShow
+            for (let y = 0; y < Math.min(binsToShow, column.length); y++) {
                 const value = column[y];
                 const intensity = value / 255;
 
@@ -334,6 +406,57 @@ class Visualizer {
                 this.ctx.fillRect(xPos, yPos, columnWidth + 1, rowHeight + 1);
             }
         }
+
+        // Draw frequency labels on Y-axis (adjusted for zoom)
+        this.ctx.font = '11px Inter, sans-serif';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'middle';
+
+        // Calculate max frequency being shown based on zoom
+        const maxFreqShown = 1000 / this.zoomLevel;
+
+        // Draw labels at key frequencies within the visible range
+        const freqStep = maxFreqShown / 5;
+        for (let i = 0; i <= 5; i++) {
+            const freq = Math.round(i * freqStep);
+            const binIndex = Math.floor((freq / nyquist) * bufferLength);
+            const binsToShow = Math.floor((maxFreqShown / nyquist) * bufferLength);
+            const rowHeight = canvasHeight / binsToShow;
+            const y = canvasHeight - (binIndex / maxFreqShown * canvasHeight);
+            this.ctx.fillText(`${freq}Hz`, 5, y);
+        }
+
+        // Draw musical note labels on right side (if enabled)
+        if (this.showSpectrogramNotes) {
+            this.ctx.textAlign = 'right';
+
+            // Calculate which notes fall within the visible frequency range
+            const minFreq = 0;
+            const maxFreq = maxFreqShown;
+
+            // Find MIDI notes that fall within this range
+            for (let midi = 12; midi <= 108; midi++) { // C0 to C8
+                const freq = 440 * Math.pow(2, (midi - 69) / 12); // A4 = 440Hz
+
+                if (freq >= minFreq && freq <= maxFreq) {
+                    const noteName = this.noteNames[midi % 12];
+                    const octave = Math.floor(midi / 12) - 1;
+                    const noteColor = this.getNoteColor(noteName);
+
+                    // Calculate Y position for this frequency
+                    const y = canvasHeight - (freq / maxFreqShown * canvasHeight);
+
+                    // Draw note label with color
+                    this.ctx.fillStyle = noteColor;
+                    this.ctx.fillText(`${noteName}${octave}`, canvasWidth - 5, y);
+                }
+            }
+
+            // Reset text align
+            this.ctx.textAlign = 'left';
+        }
+
 
         // Draw grid
         this.drawGrid(canvasWidth, canvasHeight);

@@ -46,7 +46,7 @@ class PitchDetector {
 
             // Create analyser node
             this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = this.bufferSize * 2;
+            this.analyser.fftSize = 8192; // Larger FFT for better low-frequency resolution
             this.analyser.smoothingTimeConstant = 0;
 
             // Create microphone source
@@ -154,20 +154,22 @@ class PitchDetector {
 
     /**
      * Autocorrelation algorithm for pitch detection
+     * Optimized for bass voices - prefers fundamental over harmonics
+     * Uses low-frequency bias for A1-C2 range
      */
     autoCorrelate(buffer, sampleRate) {
-        // Minimum and maximum frequencies to detect
-        const minFrequency = 80;  // ~E2
+        // Extended range for very low bass voices - down to A0 (~27.5Hz)
+        const minFrequency = 40;   // E1 - for very low bass voices
         const maxFrequency = 1200; // ~D6
 
         const minPeriod = Math.floor(sampleRate / maxFrequency);
         const maxPeriod = Math.floor(sampleRate / minFrequency);
 
         const size = buffer.length;
-        const correlations = new Array(maxPeriod);
+        const correlations = new Array(maxPeriod + 1).fill(0);
 
         // Calculate autocorrelation
-        for (let lag = minPeriod; lag < maxPeriod; lag++) {
+        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
             let sum = 0;
             for (let i = 0; i < size - lag; i++) {
                 sum += buffer[i] * buffer[i + lag];
@@ -179,7 +181,7 @@ class PitchDetector {
         let maxCorrelation = -1;
         let maxLag = -1;
 
-        for (let lag = minPeriod; lag < maxPeriod; lag++) {
+        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
             if (correlations[lag] > maxCorrelation) {
                 maxCorrelation = correlations[lag];
                 maxLag = lag;
@@ -192,10 +194,12 @@ class PitchDetector {
             const y2 = correlations[maxLag];
             const y3 = correlations[maxLag + 1];
 
-            const delta = (y3 - y1) / (2 * (2 * y2 - y1 - y3));
-            const interpolatedLag = maxLag + delta;
+            if (y2 > 0) {
+                const delta = (y3 - y1) / (2 * (2 * y2 - y1 - y3));
+                const interpolatedLag = maxLag + delta;
 
-            return sampleRate / interpolatedLag;
+                return sampleRate / interpolatedLag;
+            }
         }
 
         return maxLag > 0 ? sampleRate / maxLag : -1;

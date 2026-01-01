@@ -69,6 +69,9 @@
                 <div class="canvas-overlay">
                     <div class="grid-lines"></div>
                 </div>
+                <div class="zoom-hint">
+                    <span>🖱️ Drag ↕️: V-Zoom | Drag ↔️: H-Zoom</span>
+                </div>
             </div>
 
             <!-- Controls -->
@@ -119,6 +122,46 @@
                         <label for="smoothing">Smoothing</label>
                         <input type="range" id="smoothing" min="0" max="100" value="70">
                         <span class="setting-hint">Reduce noise in detection</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="tuningThreshold">Tuning Threshold</label>
+                        <input type="range" id="tuningThreshold" min="1" max="20" value="5">
+                        <span class="setting-hint">±<span id="tuningThresholdValue">5</span> cents to be "in
+                            tune"</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>Pitch Range</label>
+                        <div class="range-selectors">
+                            <select id="minNoteSelect"></select>
+                            <span>to</span>
+                            <select id="maxNoteSelect"></select>
+                        </div>
+                        <span class="setting-hint">Display range for pitch diagram</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>Detection Mode</label>
+                        <div class="mode-switch">
+                            <button class="mode-switch-btn active" data-detection-mode="on-sound">On Sound</button>
+                            <button class="mode-switch-btn" data-detection-mode="live">Live Mode</button>
+                        </div>
+                        <span class="setting-hint">On Sound: only when pitch detected | Live: continuous</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="zoomLevel">Vertical Zoom: <span id="zoomValue">1.0x</span></label>
+                        <input type="range" id="zoomLevel" min="50" max="300" value="100" step="10">
+                        <span class="setting-hint">Zoom in/out on the pitch range</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="scanSpeed">Scan Speed: <span id="scanSpeedValue">1.0x</span></label>
+                        <input type="range" id="scanSpeed" min="50" max="200" value="100" step="10">
+                        <span class="setting-hint">How fast the diagram scrolls</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="showSpectrogramNotes" checked>
+                            Show note labels on spectrogram
+                        </label>
+                        <span class="setting-hint">Display musical notes on the right side</span>
                     </div>
                 </div>
             </div>
