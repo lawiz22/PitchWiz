@@ -7,9 +7,13 @@ let pitchDetector = null;
 let visualizer = null;
 let isListening = false;
 let tuningThreshold = 5; // cents
-const pitchBuffer = [];
-const pitchBufferSize = 30; // ~1.5 seconds at typical update rate
-const minBufferSize = 10; // Minimum samples before showing stable reading
+window.tuningThreshold = tuningThreshold; // Make accessible to visualizer
+let pitchBuffer = [];
+let pitchBufferSize = 30; // Increased for stability
+let minBufferSize = 10; // Minimum samples before displaying
+let voiceMode = false; // Voice mode for smoother averaging
+let voiceModeBufferSize = 50; // ~1 second at 50Hz update rate
+// stable reading
 
 // DOM Elements
 const startBtn = document.getElementById('startBtn');
@@ -61,12 +65,23 @@ function init() {
     closeSettings.addEventListener('click', closeSettingsModal);
 
     // Mode toggle
+    const waveformGainControl = document.getElementById('waveformGainControl');
+    const noteDisplay = document.getElementById('noteDisplay');
     modeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             modeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const mode = btn.dataset.mode;
             visualizer.setMode(mode);
+
+            // Show/hide waveform gain control and tuner box based on mode
+            if (mode === 'tuner') {
+                waveformGainControl.style.display = 'block';
+                noteDisplay.style.display = 'none'; // Hide tuner box in tuner mode
+            } else {
+                waveformGainControl.style.display = 'none';
+                noteDisplay.style.display = 'block'; // Show tuner box in other modes
+            }
         });
     });
 
@@ -94,7 +109,51 @@ function init() {
         visualizer.showSpectrogramNotes = e.target.checked;
     });
 
+    // Waveform gain slider
+    const waveformGainInput = document.getElementById('waveformGain');
+    const waveformGainValue = document.getElementById('waveformGainValue');
+    waveformGainInput.addEventListener('input', (e) => {
+        const gain = parseInt(e.target.value) / 100;
+        visualizer.waveformGain = gain;
+        waveformGainValue.textContent = `${gain.toFixed(1)}x`;
+    });
 
+    // Main UI waveform gain slider
+    const waveformGainMainInput = document.getElementById('waveformGainMain');
+    const waveformGainMainValue = document.getElementById('waveformGainMainValue');
+    if (waveformGainMainInput) {
+        waveformGainMainInput.addEventListener('input', (e) => {
+            const gain = parseInt(e.target.value) / 100;
+            visualizer.waveformGain = gain;
+            waveformGainMainValue.textContent = `${gain.toFixed(1)}x`;
+            // Sync with settings slider
+            waveformGainInput.value = e.target.value;
+            waveformGainValue.textContent = `${gain.toFixed(1)}x`;
+        });
+    }
+
+    // Voice mode checkbox
+    const voiceModeCheckbox = document.getElementById('voiceMode');
+    voiceModeCheckbox.addEventListener('change', (e) => {
+        voiceMode = e.target.checked;
+        // Adjust buffer size based on voice mode
+        if (voiceMode) {
+            pitchBufferSize = voiceModeBufferSize;
+        } else {
+            pitchBufferSize = 30;
+        }
+        // Clear buffer when switching modes
+        pitchBuffer = [];
+    });
+
+    // Tuning tolerance slider
+    const tuningToleranceInput = document.getElementById('tuningTolerance');
+    const tuningToleranceValue = document.getElementById('tuningToleranceValue');
+    tuningToleranceInput.addEventListener('input', (e) => {
+        tuningThreshold = parseInt(e.target.value);
+        window.tuningThreshold = tuningThreshold; // Update global
+        tuningToleranceValue.textContent = `${tuningThreshold}¢`;
+    });
     // Populate note range selectors (C0 to C8)
     const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
     for (let octave = 0; octave <= 8; octave++) {
@@ -171,6 +230,7 @@ function init() {
     let startY = 0;
     let startVZoom = 1.0;
     let startHZoom = 1.0;
+    let startWaveformZoom = 1.0;
 
     canvas.addEventListener('mousedown', (e) => {
         isDragging = true;
@@ -178,24 +238,36 @@ function init() {
         startY = e.clientY;
         startVZoom = visualizer.zoomLevel;
         startHZoom = visualizer.horizontalZoom;
+        startWaveformZoom = visualizer.waveformZoom || 1.0;
         canvas.style.cursor = 'grabbing';
     });
 
     canvas.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
+        if (!isDragging) return;
 
-            // Vertical drag = vertical zoom (pitch range)
-            const vZoomDelta = -deltaY / 100;
-            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomDelta));
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        // Check current mode
+        const currentMode = visualizer.mode;
+
+        if (currentMode === 'tuner') {
+            // In tuner mode: vertical drag controls waveform zoom
+            const vZoomChange = -deltaY / 100;
+            const newWaveformZoom = Math.max(0.5, Math.min(3.0, startWaveformZoom + vZoomChange));
+            visualizer.waveformZoom = newWaveformZoom;
+        } else {
+            // In other modes: vertical = vertical zoom, horizontal = horizontal zoom
+            const vZoomChange = -deltaY / 100;
+            const hZoomChange = deltaX / 100;
+
+            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomChange));
+            const newHZoom = Math.max(0.5, Math.min(3.0, startHZoom + hZoomChange));
+
             visualizer.setZoomLevel(newVZoom);
             zoomValue.textContent = `${newVZoom.toFixed(1)}x`;
             zoomLevelInput.value = Math.round(newVZoom * 100);
 
-            // Horizontal drag = horizontal zoom (time axis)
-            const hZoomDelta = deltaX / 100;
-            const newHZoom = Math.max(0.5, Math.min(3.0, startHZoom + hZoomDelta));
             visualizer.setHorizontalZoom(newHZoom);
         }
     });

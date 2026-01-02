@@ -126,7 +126,25 @@ MIT License - Feel free to use and modify!
 
 ## Credits
 
-Built with ❤️ using modern web technologies.
+Built with ❤️ by Louis-Martin Richard using modern web technologies.
+
+
+
+Future Features: 
+
+📊 Recording & Playback - Record sessions and review your progress
+📈 Progress Tracking - Track pitch accuracy over time, see improvement graphs
+🎯 Practice Modes - Interval training, scale practice, specific exercises
+🎼 Sheet Music Integration - Follow along with notation
+🔊 Audio Export - Save your best takes
+📱 Mobile Optimization - Touch controls for phone/tablet
+🎨 Themes - Dark/light mode, custom color schemes
+🌍 Multiple Tuning Systems - Just intonation, historical temperaments
+🎤 Formant Analysis - For vowel shaping and resonance
+🔄 Real-time Effects - Reverb, pitch correction preview
+📚 Exercise Library - Built-in vocal exercises with targets
+👥 Multi-user Profiles - Track different singers
+🎯 Target Pitch Display - Show where you should be vs where you are
 
 ---
 

@@ -38,6 +38,7 @@
                 </svg>
                 <h1>PitchWiz</h1>
             </div>
+            <div class="tuning-reference">A4 = 440Hz</div>
             <button class="settings-btn" id="settingsBtn" aria-label="Settings">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
@@ -49,7 +50,18 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Current Note Display -->
+            <!-- Visualization Canvas -->
+            <div class="visualization-container">
+                <canvas id="visualizationCanvas"></canvas>
+                <div class="canvas-overlay">
+                    <div class="grid-lines"></div>
+                </div>
+                <div class="zoom-hint">
+                    <span>🖱️ Drag ↕️: V-Zoom | Drag ↔️: H-Zoom</span>
+                </div>
+            </div>
+
+            <!-- Compact Tuner Display -->
             <div class="note-display" id="noteDisplay">
                 <div class="note-name" id="noteName">--</div>
                 <div class="octave" id="octave"></div>
@@ -63,15 +75,16 @@
                 </div>
             </div>
 
-            <!-- Visualization Canvas -->
-            <div class="visualization-container">
-                <canvas id="visualizationCanvas"></canvas>
-                <div class="canvas-overlay">
-                    <div class="grid-lines"></div>
-                </div>
-                <div class="zoom-hint">
-                    <span>🖱️ Drag ↕️: V-Zoom | Drag ↔️: H-Zoom</span>
-                </div>
+            <!-- Waveform Gain Control (visible in tuner mode) -->
+            <div class="waveform-gain-control" id="waveformGainControl"
+                style="display: none; margin-bottom: var(--spacing-lg);">
+                <label for="waveformGainMain"
+                    style="font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                    Waveform Gain: <span id="waveformGainMainValue"
+                        style="color: var(--color-accent-primary);">2.0x</span>
+                </label>
+                <input type="range" id="waveformGainMain" min="50" max="1000" value="200" step="10"
+                    style="width: 100%;">
             </div>
 
             <!-- Controls -->
@@ -92,17 +105,6 @@
                 </div>
             </div>
 
-            <!-- Info Panel -->
-            <div class="info-panel">
-                <div class="info-item">
-                    <span class="info-label">A4 Reference</span>
-                    <span class="info-value" id="a4Reference">440 Hz</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Detected</span>
-                    <span class="info-value" id="detectionStatus">Waiting...</span>
-                </div>
-            </div>
         </main>
 
         <!-- Settings Modal -->
@@ -162,6 +164,23 @@
                             Show note labels on spectrogram
                         </label>
                         <span class="setting-hint">Display musical notes on the right side</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="waveformGain">Waveform Gain: <span id="waveformGainValue">2.0x</span></label>
+                        <input type="range" id="waveformGain" min="50" max="1000" value="200" step="10">
+                        <span class="setting-hint">Adjust waveform amplitude in tuner mode</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="voiceMode">
+                            Voice Mode (Smoother Tuning)
+                        </label>
+                        <span class="setting-hint">Adds averaging for vocal pitch - easier to stay in tune</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="tuningTolerance">Tuning Tolerance: <span id="tuningToleranceValue">5¢</span></label>
+                        <input type="range" id="tuningTolerance" min="3" max="15" value="5" step="1">
+                        <span class="setting-hint">How close to be "in tune" (green indicator)</span>
                     </div>
                 </div>
             </div>

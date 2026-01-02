@@ -31,6 +31,8 @@ class Visualizer {
         this.scanSpeed = 1.0; // 0.5 to 2.0
         this.scrollOffset = 0; // For smooth scrolling
         this.showSpectrogramNotes = true; // Show note labels on spectrogram
+        this.waveformZoom = 1.0; // Tuner waveform zoom: 0.5 to 3.0
+        this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
 
 
         // Animation
@@ -152,6 +154,7 @@ class Visualizer {
                 frequency: pitchData ? pitchData.frequency : null,
                 note: pitchData ? pitchData.note : null,
                 octave: pitchData ? pitchData.octave : null,
+                cents: pitchData ? pitchData.cents : null,
                 timestamp: Date.now()
             });
 
@@ -235,8 +238,9 @@ class Visualizer {
                     continue;
                 }
 
-                const x1 = (i - 1) * pointSpacing - scrollOffset;
-                const x2 = i * pointSpacing - scrollOffset;
+                const leftMargin = 50; // Align with grid and labels
+                const x1 = leftMargin + (i - 1) * pointSpacing - scrollOffset;
+                const x2 = leftMargin + i * pointSpacing - scrollOffset;
 
                 const y1 = this.frequencyToY(prevPoint.frequency, canvasHeight);
                 const y2 = this.frequencyToY(currPoint.frequency, canvasHeight);
@@ -373,20 +377,25 @@ class Visualizer {
         const canvasHeight = this.canvas.height / window.devicePixelRatio;
 
         // Draw spectrogram with zoom support
-        const columnWidth = canvasWidth / this.spectrogramData.length;
+        // Apply horizontal zoom - controls how much time history to show
+        const dataToShow = Math.floor(this.spectrogramData.length / this.horizontalZoom);
+        const startIndex = Math.max(0, this.spectrogramData.length - dataToShow);
+        const visibleData = this.spectrogramData.slice(startIndex);
+
+        const columnWidth = canvasWidth / visibleData.length;
 
         // Safety check - wait for audio to initialize
         if (!this.audioContext) return;
         const nyquist = this.audioContext.sampleRate / 2;
 
-        // Apply zoom to frequency range - zoom in = show less frequency range (more detail)
+        // Apply vertical zoom to frequency range - zoom in = show less frequency range (more detail)
         // Default: 1000Hz, zoom 2x = 500Hz, zoom 0.5x = 2000Hz
         const maxFreqToShow = 1000 / this.zoomLevel;
         const binsToShow = Math.floor((maxFreqToShow / nyquist) * bufferLength);
         const rowHeight = canvasHeight / binsToShow;
 
-        for (let x = 0; x < this.spectrogramData.length; x++) {
-            const column = this.spectrogramData[x];
+        for (let x = 0; x < visibleData.length; x++) {
+            const column = visibleData[x];
 
             // Only draw frequency bins up to maxFreqToShow
             for (let y = 0; y < Math.min(binsToShow, column.length); y++) {
@@ -411,19 +420,24 @@ class Visualizer {
         this.ctx.font = '11px Inter, sans-serif';
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'middle';
 
         // Calculate max frequency being shown based on zoom
         const maxFreqShown = 1000 / this.zoomLevel;
 
-        // Draw labels at key frequencies within the visible range
-        const freqStep = maxFreqShown / 5;
+        // Draw labels evenly spaced on Y-axis
         for (let i = 0; i <= 5; i++) {
-            const freq = Math.round(i * freqStep);
-            const binIndex = Math.floor((freq / nyquist) * bufferLength);
-            const binsToShow = Math.floor((maxFreqShown / nyquist) * bufferLength);
-            const rowHeight = canvasHeight / binsToShow;
-            const y = canvasHeight - (binIndex / maxFreqShown * canvasHeight);
+            const freq = Math.round((i / 5) * maxFreqShown);
+            const y = canvasHeight - (i / 5) * canvasHeight;
+
+            // Adjust text baseline to prevent cutoff at edges
+            if (i === 0) {
+                this.ctx.textBaseline = 'bottom'; // Bottom label
+            } else if (i === 5) {
+                this.ctx.textBaseline = 'top'; // Top label
+            } else {
+                this.ctx.textBaseline = 'middle'; // Middle labels
+            }
+
             this.ctx.fillText(`${freq}Hz`, 5, y);
         }
 
@@ -479,20 +493,30 @@ class Visualizer {
         this.ctx.fillStyle = this.colors.background;
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // Draw waveform
+        // Get current pitch color
+        const pitchData = this.pitchHistory.length > 0 ? this.pitchHistory[this.pitchHistory.length - 1] : null;
+        const waveformColor = pitchData && pitchData.note ? this.getNoteColor(pitchData.note) : this.colors.primary;
+
+        // Apply waveform zoom - show subset of data for more detail
+        const zoomedBufferLength = Math.floor(bufferLength / this.waveformZoom);
+        const startIndex = Math.floor((bufferLength - zoomedBufferLength) / 2);
+
+        // Draw waveform with pitch-based color
         this.ctx.lineWidth = 3;
-        this.ctx.strokeStyle = this.colors.primary;
+        this.ctx.strokeStyle = waveformColor;
         this.ctx.shadowBlur = 15;
-        this.ctx.shadowColor = this.colors.primary;
+        this.ctx.shadowColor = waveformColor;
 
         this.ctx.beginPath();
 
-        const sliceWidth = canvasWidth / bufferLength;
+        const sliceWidth = canvasWidth / zoomedBufferLength;
         let x = 0;
 
-        for (let i = 0; i < bufferLength; i++) {
-            const v = dataArray[i] / 128.0;
-            const y = (v * canvasHeight) / 2;
+        for (let i = 0; i < zoomedBufferLength; i++) {
+            const dataIndex = startIndex + i;
+            const v = dataArray[dataIndex] / 128.0; // Normalize to -1 to 1 range
+            // Center at canvasHeight/2 and apply gain
+            const y = canvasHeight / 2 + ((v - 1) * canvasHeight / 2 * this.waveformGain);
 
             if (i === 0) {
                 this.ctx.moveTo(x, y);
@@ -513,6 +537,83 @@ class Visualizer {
         this.ctx.moveTo(0, canvasHeight / 2);
         this.ctx.lineTo(canvasWidth, canvasHeight / 2);
         this.ctx.stroke();
+
+        // Draw pitch info overlay
+        if (pitchData && pitchData.note && pitchData.frequency) {
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+
+            // Draw background glow when in tune
+            if (pitchData.cents !== undefined && pitchData.cents !== null) {
+                // Use the tuning threshold from app.js (passed via window or global)
+                const threshold = window.tuningThreshold || 5;
+                const isInTune = Math.abs(pitchData.cents) < threshold;
+                if (isInTune) {
+                    // Draw glowing background
+                    const gradient = this.ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, canvasWidth / 2);
+                    gradient.addColorStop(0, waveformColor + '30');
+                    gradient.addColorStop(0.5, waveformColor + '10');
+                    gradient.addColorStop(1, 'transparent');
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                }
+            }
+
+            // Draw note name (large)
+            this.ctx.font = 'bold 72px Inter, sans-serif';
+            this.ctx.fillStyle = waveformColor;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = waveformColor;
+            this.ctx.fillText(pitchData.note, centerX, centerY - 80);
+
+            // Draw frequency (medium)
+            this.ctx.font = '32px Inter, sans-serif';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = waveformColor;
+            this.ctx.fillText(`${pitchData.frequency.toFixed(1)} Hz`, centerX, centerY - 20);
+
+            // Draw cents indicator bar
+            if (pitchData.cents !== undefined && pitchData.cents !== null) {
+                const roundedCents = Math.round(pitchData.cents);
+
+                // Draw bar background
+                const barWidth = 300;
+                const barHeight = 8;
+                const barX = centerX - barWidth / 2;
+                const barY = centerY + 30;
+
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                // Draw center line
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                this.ctx.fillRect(centerX - 1, barY - 5, 2, barHeight + 10);
+
+                // Draw cents marker
+                const centsPercent = ((roundedCents + 50) / 100);
+                const markerX = barX + (centsPercent * barWidth);
+                const threshold = window.tuningThreshold || 5;
+                const markerColor = Math.abs(roundedCents) < threshold ? '#4ade80' : waveformColor;
+
+                this.ctx.fillStyle = markerColor;
+                this.ctx.beginPath();
+                this.ctx.arc(markerX, barY + barHeight / 2, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Draw cents text
+                const centsText = roundedCents >= 0 ? `+${roundedCents}¢` : `${roundedCents}¢`;
+                this.ctx.font = '20px Inter, sans-serif';
+                this.ctx.fillStyle = markerColor;
+                this.ctx.shadowBlur = 5;
+                this.ctx.shadowColor = markerColor;
+                this.ctx.fillText(centsText, centerX, centerY + 65);
+            }
+
+            this.ctx.shadowBlur = 0;
+        }
     }
 
     /**

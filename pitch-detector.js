@@ -154,12 +154,12 @@ class PitchDetector {
 
     /**
      * Autocorrelation algorithm for pitch detection
-     * Optimized for bass voices - prefers fundamental over harmonics
-     * Uses low-frequency bias for A1-C2 range
+     * Simple and stable - works well for D2 and above
+     * Extended range to G1 for very low bass voices (requires good microphone)
      */
     autoCorrelate(buffer, sampleRate) {
-        // Extended range for very low bass voices - down to A0 (~27.5Hz)
-        const minFrequency = 40;   // E1 - for very low bass voices
+        // Extended range down to G1 for very low bass voices
+        const minFrequency = 45;   // G1 - for very low bass voices
         const maxFrequency = 1200; // ~D6
 
         const minPeriod = Math.floor(sampleRate / maxFrequency);
