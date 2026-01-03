@@ -275,6 +275,76 @@ class Visualizer {
     }
 
     /**
+     * Render a single frame based on playback timestamp
+     * @param {number} currentTime - Current playback time in seconds
+     * @param {Array} pitchData - Full pitch data array for the recording
+     */
+    renderPlaybackFrame(currentTime, pitchData) {
+        if (!pitchData || pitchData.length === 0) return;
+
+        // Clear canvas
+        this.ctx.fillStyle = this.colors.background;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        const canvasWidth = this.canvas.width / window.devicePixelRatio;
+        const canvasHeight = this.canvas.height / window.devicePixelRatio;
+
+        this.drawPitchGrid(canvasWidth, canvasHeight);
+
+        // Define time window to show based on horizontal zoom
+        // Base window: 5 seconds. Max zoom (3x) = ~1.6s, Min zoom (0.01x) = 500s window
+        const baseWindow = 5;
+        const timeWindow = baseWindow / this.horizontalZoom;
+
+        const endTime = currentTime * 1000; // ms
+        const startTime = (currentTime - timeWindow) * 1000; // ms
+
+        // Filter points within view window
+        // Optimization: Could use binary search for large datasets
+        const visiblePoints = pitchData.filter(p => p.timestamp >= startTime && p.timestamp <= endTime);
+
+        if (visiblePoints.length > 1) {
+            const timeScale = canvasWidth / (timeWindow * 1000); // pixels per ms
+
+            for (let i = 1; i < visiblePoints.length; i++) {
+                const prevPoint = visiblePoints[i - 1];
+                const currPoint = visiblePoints[i];
+
+                if (!prevPoint.frequency || !currPoint.frequency) continue;
+
+                // Calculate X position relative to current time (scrolling left)
+                // Right edge is currentTime
+                const x1 = canvasWidth - (endTime - prevPoint.timestamp) * timeScale;
+                const x2 = canvasWidth - (endTime - currPoint.timestamp) * timeScale;
+
+                const y1 = this.frequencyToY(prevPoint.frequency, canvasHeight);
+                const y2 = this.frequencyToY(currPoint.frequency, canvasHeight);
+
+                const color = this.getNoteColor(currPoint.note);
+
+                // Use thicker lines for higher zoom
+                this.ctx.lineWidth = 3 * Math.sqrt(this.horizontalZoom);
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowColor = color;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.stroke();
+
+                // Draw point
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x2, y2, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            this.ctx.shadowBlur = 0;
+        }
+    }
+
+    /**
      * Draw grid and note labels for pitch diagram
      */
     drawPitchGrid(width, height) {
@@ -385,8 +455,8 @@ class Visualizer {
         const columnWidth = canvasWidth / visibleData.length;
 
         // Safety check - wait for audio to initialize
-        if (!this.audioContext) return;
-        const nyquist = this.audioContext.sampleRate / 2;
+        if (!this.analyser) return;
+        const nyquist = this.analyser.context.sampleRate / 2;
 
         // Apply vertical zoom to frequency range - zoom in = show less frequency range (more detail)
         // Default: 1000Hz, zoom 2x = 500Hz, zoom 0.5x = 2000Hz

@@ -37,21 +37,140 @@
                     <circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="2" />
                 </svg>
                 <h1>PitchWiz</h1>
+                <div class="playback-track-info" id="playbackTrackInfo" style="display: none;">
+                    <span class="track-title" id="trackTitle">Song Title</span>
+                    <span class="track-date" id="trackDate">Date</span>
+                </div>
             </div>
             <div class="tuning-reference">A4 = 440Hz</div>
-            <button class="settings-btn" id="settingsBtn" aria-label="Settings">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                    <path d="M12 1v6m0 6v10M1 12h6m6 0h10" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" />
-                </svg>
-            </button>
+            <div id="appStatus" class="app-status">IDLE</div>
+            <div class="header-actions">
+                <div id="recordingTimer" class="recording-timer">00:00</div>
+                <button class="icon-btn" id="startBtn" aria-label="Start Listening" title="Start Listening">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2" />
+                        <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3m-4 0h8" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
+                    </svg>
+                </button>
+                <button class="icon-btn record-btn" id="recordBtn" aria-label="Record" title="Start Recording">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="8" fill="currentColor" />
+                    </svg>
+                </button>
+                <button class="settings-btn" id="settingsBtn" aria-label="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 1v6m0 6v10M1 12h6m6 0h10" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
         </header>
+
+        <!-- Playback Controls (Static Bar) -->
+        <div id="playbackControls" class="playback-controls">
+            <div class="playback-info">
+                <span id="playbackTime">0:00</span>
+                <span class="playback-divider">/</span>
+                <span id="playbackDuration">0:00</span>
+            </div>
+
+            <div class="playback-display">
+                <button class="icon-btn small" id="loopBtn" title="Loop Playback">
+                    <svg viewBox="0 0 24 24" fill="none" class="loop-icon">
+                        <path d="M17 1l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M7 23l-4-4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+
+                <button class="icon-btn small" id="playPauseBtn" title="Play/Pause">
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                        <rect x="6" y="4" width="4" height="16" />
+                        <rect x="14" y="4" width="4" height="16" />
+                    </svg>
+                </button>
+
+                <div class="seek-container">
+                    <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0">
+                    <div class="seek-progress" id="seekProgress"></div>
+                </div>
+
+                <button class="icon-btn small close-btn" id="closePlaybackBtn" title="Close Playback">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-mode="pitch-diagram">Pitch Diagram</button>
+            <button class="nav-tab" data-mode="spectrogram">Spectrogram</button>
+            <button class="nav-tab" data-mode="tuner">Tuner</button>
+            <button class="nav-tab" data-mode="library">Library</button>
+            <button class="nav-tab" data-mode="progress">Progress</button>
+        </nav>
 
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Playback Controls (Hidden by default) -->
+            <div id="playbackControls" class="playback-controls">
+                <div class="playback-info">
+                    <span id="playbackTime">0:00</span>
+                    <span class="playback-divider">/</span>
+                    <span id="playbackDuration">0:00</span>
+                </div>
+                <div class="playback-display">
+                    <button class="icon-btn" id="playPauseBtn" title="Play/Pause">
+                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                            <rect x="6" y="4" width="4" height="16" />
+                            <rect x="14" y="4" width="4" height="16" />
+                        </svg>
+                    </button>
+                    <div class="seek-container">
+                        <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0">
+                        <div class="seek-progress" id="seekProgress"></div>
+                    </div>
+                </div>
+                <button class="icon-btn close-playback" id="closePlaybackBtn" title="Close Playback">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Library View (Hidden by default) -->
+            <div id="libraryView" class="library-view" style="display: none;">
+                <div class="library-header">
+                    <h2>Your recordings</h2>
+                    <div class="library-filters">
+                        <!-- Future: Search/Filter -->
+                    </div>
+                </div>
+                <div id="libraryList" class="library-list">
+                    <!-- Recordings injected here -->
+                </div>
+            </div>
+
             <!-- Visualization Canvas -->
-            <div class="visualization-container">
+            <div class="visualization-container" id="visualizationContainer">
                 <canvas id="visualizationCanvas"></canvas>
                 <div class="canvas-overlay">
                     <div class="grid-lines"></div>
@@ -89,23 +208,43 @@
 
             <!-- Controls -->
             <div class="controls">
-                <button class="control-btn primary" id="startBtn">
-                    <svg class="icon-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2" />
-                        <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3m-4 0h8" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                    </svg>
-                    <span>Start Listening</span>
-                </button>
+                <!-- Modes moved to top nav -->
+            </div>
 
-                <div class="mode-toggle">
-                    <button class="mode-btn active" data-mode="pitch-diagram">Pitch Diagram</button>
-                    <button class="mode-btn" data-mode="spectrogram">Spectrogram</button>
-                    <button class="mode-btn" data-mode="tuner">Tuner</button>
+            <!-- Progress Dashboard View -->
+            <div id="progressView" class="view-container" style="display: none;">
+                <div class="progress-header">
+                    <h2>Your Progress</h2>
+                    <select id="singerSelect" class="singer-select">
+                        <option value="all">All Singers</option>
+                    </select>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalSessions">0</div>
+                        <div class="stat-label">Sessions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgAccuracy">0%</div>
+                        <div class="stat-label">Avg Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="timePracticed">0h</div>
+                        <div class="stat-label">Time Practiced</div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Accuracy Over Time</h3>
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
                 </div>
             </div>
 
         </main>
+
 
         <!-- Settings Modal -->
         <div class="modal" id="settingsModal">
@@ -187,7 +326,40 @@
         </div>
     </div>
 
+    <!-- Save Recording Modal -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content small">
+            <div class="modal-header">
+                <h2>Save Recording</h2>
+                <button class="icon-btn close-modal" id="closeSaveModal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Recording Name</label>
+                    <input type="text" id="recordingNameInput" placeholder="Recording #001">
+                </div>
+                <div class="form-group">
+                    <label>Singer / Musician</label>
+                    <input type="text" id="singerNameInput" placeholder="Enter name">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn secondary" id="discardBtn">Discard</button>
+                    <button class="btn primary" id="saveRecordingBtn">Save Recording</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="db-manager.js"></script>
+    <script src="recording-manager.js"></script>
+    <script src="progress-tracker.js"></script>
     <script src="pitch-detector.js"></script>
     <script src="visualizer.js"></script>
     <script src="app.js"></script>

@@ -13,10 +13,15 @@ let pitchBufferSize = 30; // Increased for stability
 let minBufferSize = 10; // Minimum samples before displaying
 let voiceMode = false; // Voice mode for smoother averaging
 let voiceModeBufferSize = 50; // ~1 second at 50Hz update rate
-// stable reading
+let recordingManager = null; // Recording manager instance
 
 // DOM Elements
 const startBtn = document.getElementById('startBtn');
+const recordBtn = document.getElementById('recordBtn');
+// const recordingsModal = document.getElementById('recordingsModal'); // Removed
+// const closeRecordings = document.getElementById('closeRecordings'); // Removed
+// const recordingsList = document.getElementById('recordingsList'); // Removed
+const recordingTimer = document.getElementById('recordingTimer');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 const closeSettings = document.getElementById('closeSettings');
@@ -26,10 +31,9 @@ const octave = document.getElementById('octave');
 const frequency = document.getElementById('frequency');
 const centsMarker = document.getElementById('centsMarker');
 const centsValue = document.getElementById('centsValue');
-const detectionStatus = document.getElementById('detectionStatus');
 const a4Reference = document.getElementById('a4Reference');
 const canvas = document.getElementById('visualizationCanvas');
-const modeBtns = document.querySelectorAll('.mode-btn');
+const modeBtns = document.querySelectorAll('.nav-tab');
 
 // Settings
 const a4FrequencyInput = document.getElementById('a4Frequency');
@@ -43,11 +47,79 @@ const scanSpeedInput = document.getElementById('scanSpeed');
 const scanSpeedValue = document.getElementById('scanSpeedValue');
 const tuningThresholdInput = document.getElementById('tuningThreshold');
 const tuningThresholdValue = document.getElementById('tuningThresholdValue');
+const appStatusElement = document.getElementById('appStatus');
+
+// State Management
+const AppState = {
+    IDLE: 'IDLE',
+    LISTENING: 'LISTENING',
+    RECORDING: 'RECORDING',
+    PLAYBACK: 'PLAYBACK'
+};
+
+let currentState = AppState.IDLE;
+
+function updateAppState(newState) {
+    console.log(`State transition: ${currentState} -> ${newState}`);
+    currentState = newState;
+
+    // Update Status Text
+    if (appStatusElement) {
+        appStatusElement.textContent = newState;
+        appStatusElement.className = 'app-status'; // Reset classes
+        appStatusElement.classList.add(newState.toLowerCase());
+    }
+
+    // Update UI based on state
+    switch (newState) {
+        case AppState.IDLE:
+            startBtn.classList.remove('active');
+            recordBtn.classList.remove('active');
+            recordBtn.classList.add('disabled'); // Disable record in IDLE
+            recordBtn.title = "Start Listening first to record";
+            if (visualizer) visualizer.stop();
+            updatePlayPauseIcon(false); // Ensure playback icon is reset
+            break;
+
+        case AppState.LISTENING:
+            startBtn.classList.add('active');
+            recordBtn.classList.remove('active');
+            recordBtn.classList.remove('disabled'); // Enable record
+            recordBtn.title = "Start Recording";
+            if (visualizer) visualizer.start();
+            break;
+
+        case AppState.RECORDING:
+            startBtn.classList.add('active');
+            recordBtn.classList.add('active');
+            recordBtn.classList.remove('disabled');
+            recordBtn.title = "Stop Recording";
+            break;
+
+        case AppState.PLAYBACK:
+            startBtn.classList.remove('active'); // Mic is off during playback
+            recordBtn.classList.remove('active');
+            recordBtn.classList.add('disabled');
+
+            // Ensure mic is stopped
+            if (pitchDetector && pitchDetector.isListening) {
+                pitchDetector.stop();
+                isListening = false;
+            }
+            break;
+    }
+}
+
+let isInitialized = false;
 
 /**
  * Initialize application
  */
 function init() {
+    if (isInitialized) return;
+    isInitialized = true;
+    console.log('Initializing PitchWiz...');
+
     // Create visualizer
     visualizer = new Visualizer(canvas);
 
@@ -59,6 +131,29 @@ function init() {
         onError: handleError
     });
 
+    // Initialize database
+    dbManager.init().then(() => {
+        // Initialize components that depend on dbManager
+        recordingManager = new RecordingManager(dbManager);
+
+        // Initialize Progress Tracker
+        if (typeof ProgressTracker !== 'undefined') {
+            window.progressTracker = new ProgressTracker(dbManager);
+        }
+
+        // Setup Audio Context for playback
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        console.log('Database, Recording Manager and Progress Tracker initialized');
+    }).catch(error => {
+        console.error('Failed to initialize database:', error);
+    });
+
+    // Initialize State
+    updateAppState(AppState.IDLE);
+
+    // Initialize State
+    updateAppState(AppState.IDLE);
+
     // Event listeners
     startBtn.addEventListener('click', toggleListening);
     settingsBtn.addEventListener('click', openSettings);
@@ -68,22 +163,67 @@ function init() {
     const waveformGainControl = document.getElementById('waveformGainControl');
     const noteDisplay = document.getElementById('noteDisplay');
     modeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             modeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const mode = btn.dataset.mode;
-            visualizer.setMode(mode);
 
-            // Show/hide waveform gain control and tuner box based on mode
-            if (mode === 'tuner') {
-                waveformGainControl.style.display = 'block';
-                noteDisplay.style.display = 'none'; // Hide tuner box in tuner mode
+            // Handle Views
+            const visualizationContainer = document.getElementById('visualizationContainer');
+            const libraryView = document.getElementById('libraryView');
+            const progressView = document.getElementById('progressView');
+
+            // Hide all first
+            if (visualizationContainer) visualizationContainer.style.display = 'none';
+            if (libraryView) libraryView.style.display = 'none';
+            if (progressView) progressView.style.display = 'none';
+
+            if (mode === 'library') {
+                libraryView.style.display = 'flex';
+                if (noteDisplay) noteDisplay.style.display = 'none'; // Hide tuner
+                // Stop visualizer if running (except playback logic)
+                if (!isPlaybackActive) visualizer.stop();
+                await loadRecordings();
+            } else if (mode === 'progress') {
+                progressView.style.display = 'block';
+                if (noteDisplay) noteDisplay.style.display = 'none'; // Hide tuner
+                if (!isPlaybackActive) visualizer.stop();
+                // Load Stats
+                if (window.progressTracker) {
+                    await updateProgressUI();
+                }
             } else {
-                waveformGainControl.style.display = 'none';
-                noteDisplay.style.display = 'block'; // Show tuner box in other modes
+                // Visualization Modes
+                visualizationContainer.style.display = 'block';
+
+                // If specific visualization mode
+                visualizer.setMode(mode);
+
+                // Logic to avoid loop conflict:
+                if (isPlaybackActive) {
+                    if (mode === 'pitch-diagram') {
+                        visualizer.stop(); // Handled by playback loop
+                    } else {
+                        visualizer.start(); // Spectrogram needs standard loop
+                    }
+                } else if (isListening) {
+                    visualizer.start();
+                }
+
+                // Show/hide waveform gain control and tuner box based on mode
+                if (mode === 'tuner') {
+                    if (waveformGainControl) waveformGainControl.style.display = 'block';
+                    if (noteDisplay) noteDisplay.style.display = 'none';
+                } else {
+                    if (waveformGainControl) waveformGainControl.style.display = 'none';
+                    if (mode === 'spectrogram' || mode === 'pitch-diagram') {
+                        if (noteDisplay) noteDisplay.style.display = 'block';
+                    }
+                }
             }
         });
     });
+
 
     // Settings inputs
     a4FrequencyInput.addEventListener('change', (e) => {
@@ -262,7 +402,8 @@ function init() {
             const hZoomChange = deltaX / 100;
 
             const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomChange));
-            const newHZoom = Math.max(0.5, Math.min(3.0, startHZoom + hZoomChange));
+            // Lower min horizontal zoom to 0.01 to allow massive shrinking (viewing long files)
+            const newHZoom = Math.max(0.01, Math.min(3.0, startHZoom + hZoomChange));
 
             visualizer.setZoomLevel(newVZoom);
             zoomValue.textContent = `${newVZoom.toFixed(1)}x`;
@@ -282,6 +423,11 @@ function init() {
         canvas.style.cursor = 'grab';
     });
 
+    // Recording functionality
+    // Delegated to handleRecordClick using State Machine
+    recordBtn.addEventListener('click', handleRecordClick);
+
+
     // Set cursor style
     canvas.style.cursor = 'grab';
 
@@ -298,52 +444,259 @@ function init() {
 /**
  * Toggle listening state
  */
+/**
+ * Toggle microphone listening
+ */
 async function toggleListening() {
-    if (!isListening) {
-        // Start listening
-        const success = await pitchDetector.start();
+    // If currently playing back, stop playback first
+    if (currentState === AppState.PLAYBACK) {
+        closePlayback();
+    }
 
-        if (success) {
-            isListening = true;
-            startBtn.classList.add('active');
-            startBtn.innerHTML = `
-                <svg class="icon-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2"/>
-                    <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3m-4 0h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <span>Stop Listening</span>
-            `;
-
-            // Start visualizer
-            // Pass analyser and audioContext to visualizer for spectrogram
-            visualizer.analyser = pitchDetector.getAnalyser();
-            visualizer.audioContext = pitchDetector.audioContext;
-            visualizer.start();
-
-            detectionStatus.textContent = 'Listening...';
-            detectionStatus.classList.add('pulsing');
-        }
-    } else {
-        // Stop listening
+    if (currentState === AppState.LISTENING || currentState === AppState.RECORDING) {
+        // STOP Listening
         pitchDetector.stop();
-        visualizer.stop();
+        // Visualizer stop is handled by updateAppState(IDLE) but calling it here is safe too
+
+        // If recording, stop that too
+        if (currentState === AppState.RECORDING) {
+            await stopRecordingLogic();
+        }
 
         isListening = false;
-        startBtn.classList.remove('active');
-        startBtn.innerHTML = `
-            <svg class="icon-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2"/>
-                <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3m-4 0h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span>Start Listening</span>
-        `;
-
-        // Reset display
+        updateAppState(AppState.IDLE);
         resetDisplay();
-        detectionStatus.textContent = 'Stopped';
-        detectionStatus.classList.remove('pulsing');
+
+    } else {
+        // START Listening
+        // Initialize pitch detector
+        if (!pitchDetector) {
+            pitchDetector = new PitchDetector({
+                onPitchDetected: handlePitchDetected,
+                onError: (msg) => {
+                    console.error(msg);
+                    alert(msg);
+                    updateAppState(AppState.IDLE);
+                }
+            });
+        }
+
+        const success = await pitchDetector.start();
+        if (success) {
+            isListening = true;
+            updateAppState(AppState.LISTENING);
+
+            // Set visualizer analyser
+            visualizer.setAnalyser(pitchDetector.getAnalyser());
+
+            // Resume Audio Context if suspended (browser policy)
+            if (pitchDetector.audioContext.state === 'suspended') {
+                await pitchDetector.audioContext.resume();
+            }
+        } else {
+            isListening = false;
+            updateAppState(AppState.IDLE);
+        }
     }
 }
+
+/**
+ * Handle Record Button Click (Replaces toggleRecording)
+ */
+async function handleRecordClick() {
+    if (currentState === AppState.IDLE || currentState === AppState.PLAYBACK) {
+        // Should be blocked by UI but double check
+        return;
+    }
+
+    if (currentState === AppState.RECORDING) {
+        // Stop Recording
+        await stopRecordingLogic();
+        // Do NOT force back to LISTENING here. stopRecordingLogic sets IDLE and opens modal.
+    } else if (currentState === AppState.LISTENING) {
+        // Start Recording
+        const success = await startRecordingLogic();
+        if (success) {
+            updateAppState(AppState.RECORDING);
+        }
+    }
+}
+
+// Logic to start recording
+async function startRecordingLogic() {
+    if (!pitchDetector || !pitchDetector.stream) return false;
+
+    // Use RecordingManager
+    const success = await recordingManager.startRecording(
+        pitchDetector.stream,
+        visualizer.mode
+    );
+
+    if (success) {
+        startTimer();
+        return true;
+    }
+    return false;
+}
+
+// Logic to stop recording
+async function stopRecordingLogic() {
+    console.log('stopRecordingLogic called');
+    try {
+        // stopRecording now returns TEMP data, does not save to DB yet
+        console.log('Calling recordingManager.stopRecording()...');
+        const tempData = await recordingManager.stopRecording();
+        console.log('recordingManager.stopRecording() returned', tempData);
+
+        stopTimer();
+
+        // Switch state to IDLE immediately after stopping recording
+        updateAppState(AppState.IDLE);
+
+        if (tempData && tempData.duration >= 1) { // Min 1 second
+            // Open Save Modal
+            console.log('Opening Save Modal');
+            openSaveModal();
+        } else {
+            console.warn('Recording too short, discarding.', tempData);
+            alert(`Recording too short (${tempData ? tempData.duration.toFixed(1) : 0}s), discarded.`);
+        }
+    } catch (error) {
+        console.error('Error stopping recording:', error);
+        alert('Error stopping: ' + error.message);
+    }
+}
+
+// --- SAVE RECORDING MODAL LOGIC ---
+const saveModal = document.getElementById('saveModal');
+
+/**
+ * Get color for a musical note
+ */
+function getNoteColor(note) {
+    const colors = {
+        'C': '#ff5252',  // Red
+        'C#': '#ff793f', // Orange-Red
+        'D': '#ffb142',  // Orange
+        'D#': '#ffda79', // Yellow-Orange
+        'E': '#fffa65',  // Yellow
+        'F': '#badc58',  // Yellow-Green
+        'F#': '#7bed9f', // Green
+        'G': '#26de81',  // Green-Cyan
+        'G#': '#2bcbba', // Cyan
+        'A': '#45aaf2',  // Blue-Cyan
+        'A#': '#2d98da', // Blue
+        'B': '#a55eea'   // Purple
+    };
+    return colors[note] || '#d1ccc0'; // Default gray
+}
+
+const recordingNameInput = document.getElementById('recordingNameInput');
+const singerNameInput = document.getElementById('singerNameInput');
+const saveRecordingBtn = document.getElementById('saveRecordingBtn');
+const discardBtn = document.getElementById('discardBtn');
+const closeSaveModalBtn = document.getElementById('closeSaveModal');
+
+let currentEditingId = null; // Track if we are editing an existing recording
+
+function openSaveModal() {
+    currentEditingId = null; // New recording
+    // Update Modal Title/Button
+    if (saveModal) {
+        const title = saveModal.querySelector('h2');
+        if (title) title.textContent = 'Save Recording';
+        if (discardBtn) discardBtn.style.display = 'block'; // Show discard for new
+        if (saveRecordingBtn) saveRecordingBtn.textContent = 'Save Recording';
+    }
+
+    // Generate default name
+    const id = Date.now().toString().slice(-4);
+    if (recordingNameInput) recordingNameInput.value = `Recording #${id}`;
+
+    // Prefill singer if available from previous session
+    if (localStorage.getItem('lastSinger') && singerNameInput) {
+        singerNameInput.value = localStorage.getItem('lastSinger');
+    }
+
+    if (saveModal) saveModal.classList.add('visible');
+}
+
+/**
+ * Open Modal for Renaming/Editing
+ */
+function openRenameModal(id, currentName, currentSinger) {
+    currentEditingId = id; // Editing mode
+    // Update Modal Title/Button
+    if (saveModal) {
+        const title = saveModal.querySelector('h2');
+        if (title) title.textContent = 'Edit Recording Details';
+        if (discardBtn) discardBtn.style.display = 'none'; // Hide discard for edit
+        if (saveRecordingBtn) saveRecordingBtn.textContent = 'Update';
+    }
+
+    if (recordingNameInput) recordingNameInput.value = currentName || '';
+    if (singerNameInput) singerNameInput.value = currentSinger !== 'undefined' ? currentSinger : '';
+
+    if (saveModal) saveModal.classList.add('visible');
+}
+
+function closeSaveModal() {
+    if (saveModal) saveModal.classList.remove('visible');
+    currentEditingId = null;
+    // Clear inputs
+    if (recordingNameInput) recordingNameInput.value = '';
+    // Don't clear singer name as it might be reused
+}
+
+// Event Listeners for Modal
+if (saveRecordingBtn) {
+    saveRecordingBtn.addEventListener('click', async () => {
+        const name = recordingNameInput.value.trim() || recordingNameInput.placeholder;
+        const singer = singerNameInput.value.trim() || 'Unknown';
+
+        try {
+            if (currentEditingId) {
+                // UPDATE existing
+                await dbManager.updateRecordingMetadata(currentEditingId, name, singer);
+                alert('Recording updated!');
+            } else {
+                // SAVE NEW
+                await recordingManager.saveRecording({ name, singer });
+                localStorage.setItem('lastSinger', singer);
+            }
+
+            closeSaveModal();
+            await loadRecordings(); // Refresh list
+
+            // OPTIONAL: Switch to Progress View to show it counted
+            // document.querySelector('[data-mode="progress"]').click();
+
+        } catch (e) {
+            console.error(e);
+            alert('Failed to save: ' + e.message);
+        }
+    });
+}
+
+if (discardBtn) {
+    discardBtn.addEventListener('click', () => {
+        if (confirm('Discard this recording?')) {
+            // recordingManager.discardRecording(); // If we had a cleanup method
+            recordingManager.tempData = null; // Clear temp data
+            closeSaveModal();
+        }
+    });
+}
+
+if (closeSaveModalBtn) {
+    closeSaveModalBtn.addEventListener('click', closeSaveModal);
+}
+
+
+
+
+
+
 
 /**
  * Handle pitch detection callback
@@ -351,6 +704,11 @@ async function toggleListening() {
 function handlePitchDetected(pitchData) {
     // Always pass data to visualizer (for live mode support)
     visualizer.addPitchData(pitchData);
+
+    // Add to recording if active
+    if (recordingManager && recordingManager.isRecording) {
+        recordingManager.addPitchData(pitchData);
+    }
 
     if (pitchData) {
         // Add to pitch buffer for averaging
@@ -361,7 +719,6 @@ function handlePitchDetected(pitchData) {
 
         // Only display if we have enough samples for stable reading
         if (pitchBuffer.length < minBufferSize) {
-            detectionStatus.textContent = 'Detecting...';
             return;
         }
 
@@ -409,7 +766,6 @@ function handlePitchDetected(pitchData) {
             noteDisplay.style.borderColor = '';
         }
 
-        detectionStatus.textContent = `${displayNote}${displayOctave} detected`;
     } else {
         // Clear buffer when no sound
         pitchBuffer.length = 0;
@@ -417,7 +773,6 @@ function handlePitchDetected(pitchData) {
         noteDisplay.classList.remove('active');
         noteDisplay.style.background = '';
         noteDisplay.style.borderColor = '';
-        detectionStatus.textContent = 'Listening...';
     }
 }
 
@@ -484,5 +839,760 @@ function closeSettingsModal() {
     settingsModal.classList.remove('active');
 }
 
+/**
+ * Load and display recordings
+ */
+async function loadRecordings() {
+    try {
+        const recordings = await dbManager.getAllRecordings();
+
+        // Target library list instead of recordingsList (modal)
+        const libraryList = document.getElementById('libraryList');
+        if (!libraryList) return;
+
+        if (recordings.length === 0) {
+            libraryList.innerHTML = '<p class="empty-state">No recordings yet. Start recording to save your practice sessions!</p>';
+            return;
+        }
+
+        // Sort by date (newest first)
+        recordings.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        libraryList.innerHTML = recordings.map(rec => {
+            // Generate note chips with colors
+            let notesHtml = '';
+            // Handle new data structure: notesPracticed is likely in metrics, but check metadata too
+            const metrics = rec.metrics || {};
+            const metadata = rec.metadata || {};
+            const notesPracticed = metrics.notesPracticed || metadata.notesPracticed || [];
+
+            console.log(`Recording ${rec.id} full object:`, rec);
+            console.log(`Recording ${rec.id} notes:`, notesPracticed);
+
+            if (notesPracticed && notesPracticed.length > 0) {
+                notesHtml = `<div class="recording-notes">
+                    ${notesPracticed.slice(0, 8).map(note => { // Limit to 8 notes
+                    const color = getNoteColor(note.replace(/\d+/, '')); // Remove octave for color
+                    return `<div class="note-chip-mini" style="background-color: ${color}; color: #000;">${note}</div>`;
+                }).join('')}
+                    ${notesPracticed.length > 8 ? `<div class="note-chip-mini" style="background: rgba(255,255,255,0.2); color: #fff;">+${notesPracticed.length - 8}</div>` : ''}
+                </div>`;
+            }
+
+            return `
+            <div class="recording-item" data-id="${rec.id}">
+                <div class="recording-info">
+                    <div class="recording-title" id="title-${rec.id}">${rec.name || (rec.mode.charAt(0).toUpperCase() + rec.mode.slice(1) + ' Session')}</div>
+                    <div class="recording-meta-row">
+                        <span class="category-badge">${rec.category || 'freestyle'}</span>
+                        <span class="meta-separator"></span>
+                        <span class="recording-date">${new Date(rec.date).toLocaleString()}</span>
+                        <span class="meta-separator"></span>
+                        <span>${formatDuration(rec.duration)}</span>
+                        <span class="meta-separator"></span>
+                        <span>${rec.mode} Mode</span>
+                        ${(metrics.timeInTune !== undefined || metadata.timeInTune !== undefined) ? `
+                        <span class="meta-separator"></span>
+                        <span title="Process Quality" style="color: ${(metrics.timeInTune || metadata.timeInTune) > 80 ? 'var(--color-success)' : 'var(--color-text-secondary)'}">
+                           ${metrics.timeInTune || metadata.timeInTune || 0}% Tuned
+                        </span>
+                        ` : ''}
+                        ${(metrics.avgCentsDeviation !== undefined || metadata.avgCentsDeviation !== undefined) ? `
+                        <span class="meta-separator"></span>
+                        <span title="Average Deviation">
+                           ${metrics.avgCentsDeviation || metadata.avgCentsDeviation || 0}¢ Dev
+                        </span>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                ${notesHtml}
+
+                <div class="recording-actions">
+                    <button class="action-btn play" onclick="playRecording(${rec.id})" title="Play">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn" onclick="openRenameModal(${rec.id}, '${(rec.name || '').replace(/'/g, "\\'")}', '${(rec.singer || '').replace(/'/g, "\\'")}')" title="Rename">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteRecording(${rec.id})" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading recordings:', error);
+        const libraryList = document.getElementById('libraryList');
+        if (libraryList) libraryList.innerHTML = `<p class="error-state">Error loading recordings: ${error.message}</p>`;
+    }
+}
+
+
+
+// Playback state
+let audioPlayer = null;
+let playbackAnimationId = null;
+let currentRecordingData = null;
+let isPlaybackActive = false;
+
+// Playback UI Elements
+const playbackControls = document.getElementById('playbackControls');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const playIcon = document.querySelector('.play-icon');
+const pauseIcon = document.querySelector('.pause-icon');
+const seekBar = document.getElementById('seekBar');
+const seekProgress = document.getElementById('seekProgress');
+const playbackTime = document.getElementById('playbackTime');
+const playbackDuration = document.getElementById('playbackDuration');
+const closePlaybackBtn = document.getElementById('closePlaybackBtn');
+
+/**
+ * Start Playback
+ */
+async function playRecording(id) {
+    try {
+        const recording = await dbManager.getRecording(id);
+        if (!recording) return;
+
+        // Stop listening/recording and switch state FIRST
+        // This ensures mic is off and context handling is clear
+        updateAppState(AppState.PLAYBACK);
+
+
+        // Setup audio
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer = null;
+        }
+
+        const audioUrl = URL.createObjectURL(recording.audioBlob);
+        audioPlayer = new Audio(audioUrl);
+
+        // --- AUDIO ROUTING FOR VISUALIZER ---
+        // Connect playback audio to visualizer's analyser so spectrogram/tuner work
+        // --- AUDIO ROUTING FOR VISUALIZER ---
+        // Connect playback audio to visualizer's analyser so spectrogram/tuner work
+
+        let playbackContext = null;
+        let playbackAnalyser = null;
+
+        // Use existing context if available (and not closed), otherwise create new one
+        if (pitchDetector && pitchDetector.audioContext && pitchDetector.audioContext.state !== 'closed') {
+            playbackContext = pitchDetector.audioContext;
+            playbackAnalyser = pitchDetector.analyser;
+        } else {
+            // Create dedicated context for playback if mic is off
+            playbackContext = new (window.AudioContext || window.webkitAudioContext)();
+            playbackAnalyser = playbackContext.createAnalyser();
+            playbackAnalyser.fftSize = 8192;
+            playbackAnalyser.smoothingTimeConstant = 0;
+            // Update visualizer to use this new analyser
+            if (visualizer) visualizer.setAnalyser(playbackAnalyser);
+        }
+
+        if (playbackContext && playbackAnalyser) {
+            // Create source from the new audio element
+            const source = playbackContext.createMediaElementSource(audioPlayer);
+
+            // Connect to visualizer analyser
+            source.connect(playbackAnalyser);
+
+            // Connect to destination (speakers) so we can hear it
+            source.connect(playbackContext.destination);
+
+            // Resume context if suspended
+            if (playbackContext.state === 'suspended') {
+                await playbackContext.resume();
+            }
+        }
+        // ------------------------------------
+        // ------------------------------------
+
+        currentRecordingData = recording;
+        isPlaybackActive = true;
+        // updateAppState(AppState.PLAYBACK); // MOVED TO TOP
+
+        // Initialize UI
+        playbackControls.classList.add('active');
+        playbackDuration.textContent = formatDuration(recording.duration);
+        seekBar.max = recording.duration * 10; // 0.1s resolution
+        seekBar.value = 0;
+        updateSeekProgress(0);
+
+        // Switch View to Visualization (Pitch Diagram)
+        const visualizationContainer = document.getElementById('visualizationContainer');
+        const libraryView = document.getElementById('libraryView');
+        if (visualizationContainer && libraryView) {
+            libraryView.style.display = 'none';
+            visualizationContainer.style.display = 'block';
+        }
+
+        // Update Nav Tabs
+        const modeBtns = document.querySelectorAll('.nav-tab');
+        modeBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.mode === 'pitch-diagram') {
+                btn.classList.add('active');
+            }
+        });
+
+        // Update Header Track Info
+        const trackTitle = document.getElementById('trackTitle');
+        const trackDate = document.getElementById('trackDate');
+        const playbackTrackInfo = document.getElementById('playbackTrackInfo');
+
+        if (trackTitle && trackDate && playbackTrackInfo) {
+            trackTitle.textContent = recording.name || 'Untitled';
+            trackDate.textContent = new Date(recording.date).toLocaleString();
+            playbackTrackInfo.style.display = 'flex';
+        }
+
+        // Allow pitch visualizer to handle stored data
+        // Update App State to PLAYBACK
+        updateAppState(AppState.PLAYBACK);
+
+        // Set visualizer to pitch diagram mode
+        visualizer.setMode('pitch-diagram');
+        visualizer.clear();
+
+        // Start playback
+        audioPlayer.play();
+
+        // Reset/Apply Loop Default
+        isLooping = false;
+        loopBtn.classList.remove('active');
+        audioPlayer.loop = isLooping;
+
+        updatePlayPauseIcon(true);
+        startPlaybackLoop();
+
+        // Audio events
+        audioPlayer.addEventListener('ended', () => {
+            updatePlayPauseIcon(false);
+            cancelAnimationFrame(playbackAnimationId);
+            // Keep controls open so user can replay
+        });
+
+    } catch (error) {
+        console.error('Error playing recording:', error);
+        alert('Error playing recording');
+    }
+}
+
+/**
+ * Rename a recording
+ */
+async function renameRecording(id) {
+    // Determine the current name
+    // Since we don't have the object handy, we can find it in DOM or generic "Recording"
+    const currentNameElement = document.getElementById(`title-${id}`);
+    const currentName = currentNameElement ? currentNameElement.textContent : 'Recording';
+
+    const newName = prompt('Enter new name for recording:', currentName);
+    if (!newName || newName.trim() === '') return;
+
+    try {
+        await dbManager.updateRecordingName(id, newName.trim());
+        await loadRecordings(); // Refresh list
+    } catch (error) {
+        console.error('Error renaming recording:', error);
+        alert('Error renaming recording');
+    }
+}
+
+/**
+ * Playback Loop (Sync Visualizer)
+ */
+function startPlaybackLoop() {
+    if (!isPlaybackActive || !audioPlayer) return;
+
+    const currentTime = audioPlayer.currentTime;
+
+    // Update visualizer based on mode
+    if (currentRecordingData && currentRecordingData.pitchData) {
+
+        if (visualizer.mode === 'pitch-diagram') {
+            visualizer.renderPlaybackFrame(currentTime, currentRecordingData.pitchData);
+        }
+        else if (visualizer.mode === 'tuner') {
+            // Find the pitch frame closest to current time
+            // binary search equivalent would be faster but simple find is safer for now
+            // optimization: since we play forward, we could cache valid index, but for now simple:
+            const timeMs = currentTime * 1000;
+            // Find last point that is before or at current time
+            // Assuming data is sorted by timestamp (it should be)
+            // We search for a point within a small window (e.g. 100ms) to ensure sync
+            // A simple approach is finding 
+            let bestPoint = null;
+            // Iterate backwards to find recent
+            /* 
+              Optimization: Use a binary search or just simple loop if array is not massive.
+              Given typical recording size, a quick reverse loop from end is inefficient.
+              Let's accept a simple .find() or just use a cached index if we wanted to be fancy.
+              Let's use a standard .findLast() if available or filter.
+            */
+            // Use a helper variable for index if we want, but let's just find closest point
+            // Optimization: Assume sample rate ~60fps, we can just math it if constant rate? 
+            // No, data is non-uniform.
+            // Let's use array.find for now.
+
+            const closest = currentRecordingData.pitchData.reduce((prev, curr) => {
+                return (Math.abs(curr.timestamp - timeMs) < Math.abs(prev.timestamp - timeMs) ? curr : prev);
+            });
+
+            if (closest && Math.abs(closest.timestamp - timeMs) < 200) { // 200ms tolerance
+                // Push to visualizer for drawing
+                visualizer.addPitchData(closest);
+            }
+        }
+    }
+
+    // Update UI
+    playbackTime.textContent = formatDuration(currentTime);
+    if (!isDraggingSeek) {
+        seekBar.value = currentTime * 10;
+        updateSeekProgress(currentTime / audioPlayer.duration * 100);
+    }
+
+    if (!audioPlayer.paused) {
+        playbackAnimationId = requestAnimationFrame(startPlaybackLoop);
+    }
+}
+
+/**
+ * Update Play/Pause Icon
+ */
+function updatePlayPauseIcon(isPlaying) {
+    if (isPlaying) {
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+    } else {
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+        // Stop loop if paused
+        cancelAnimationFrame(playbackAnimationId);
+    }
+}
+
+function updateSeekProgress(percent) {
+    seekProgress.style.setProperty('--progress', `${percent}%`);
+}
+
+// Playback Event Listeners
+const loopBtn = document.getElementById('loopBtn');
+let isLooping = false;
+
+loopBtn.addEventListener('click', () => {
+    isLooping = !isLooping;
+    if (audioPlayer) {
+        audioPlayer.loop = isLooping;
+    }
+
+    if (isLooping) {
+        loopBtn.classList.add('active');
+    } else {
+        loopBtn.classList.remove('active');
+    }
+});
+
+playPauseBtn.addEventListener('click', () => {
+    if (!audioPlayer) return;
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        updatePlayPauseIcon(true);
+        startPlaybackLoop();
+    } else {
+        audioPlayer.pause();
+        updatePlayPauseIcon(false);
+    }
+});
+
+let isDraggingSeek = false;
+seekBar.addEventListener('mousedown', () => isDraggingSeek = true);
+seekBar.addEventListener('mouseup', () => {
+    isDraggingSeek = false;
+    if (audioPlayer) {
+        audioPlayer.currentTime = seekBar.value / 10;
+    }
+});
+seekBar.addEventListener('input', () => {
+    const percent = (seekBar.value / seekBar.max) * 100;
+    updateSeekProgress(percent);
+    playbackTime.textContent = formatDuration(seekBar.value / 10);
+    // Live seek (optional, might be heavy)
+    if (audioPlayer) {
+        // audioPlayer.currentTime = seekBar.value / 10; 
+        // Better to do on change/mouseup for audio, but we can update visualizer
+        if (currentRecordingData && currentRecordingData.pitchData) {
+            visualizer.renderPlaybackFrame(seekBar.value / 10, currentRecordingData.pitchData);
+        }
+    }
+});
+seekBar.addEventListener('change', () => {
+    if (audioPlayer) {
+        audioPlayer.currentTime = seekBar.value / 10;
+        if (!audioPlayer.paused) {
+            // Loop is already running
+        } else {
+            // Render single frame
+            if (currentRecordingData && currentRecordingData.pitchData) {
+                visualizer.renderPlaybackFrame(audioPlayer.currentTime, currentRecordingData.pitchData);
+            }
+        }
+    }
+});
+
+closePlaybackBtn.addEventListener('click', stopPlayback);
+
+function stopPlayback() {
+    if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer = null;
+    }
+    isPlaybackActive = false;
+    cancelAnimationFrame(playbackAnimationId);
+    playbackControls.classList.remove('active');
+    visualizer.clear();
+    currentRecordingData = null;
+
+    updateAppState(AppState.IDLE);
+}
+
+/**
+ * Delete a recording
+ */
+async function deleteRecording(id) {
+    if (!confirm('Delete this recording?')) return;
+
+    try {
+        await dbManager.deleteRecording(id);
+        await loadRecordings();
+    } catch (error) {
+        console.error('Error deleting recording:', error);
+        alert('Error deleting recording');
+    }
+}
+
+/**
+ * Format duration in seconds to MM:SS
+ */
+function formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Make functions global for onclick handlers
+window.playRecording = playRecording;
+window.deleteRecording = deleteRecording;
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+/**
+ * Update recording timer
+ */
+let timerInterval = null;
+function startTimer() {
+    let seconds = 0;
+    if (recordingTimer) {
+        recordingTimer.textContent = '00:00';
+        recordingTimer.classList.add('visible');
+    }
+
+    // Clear any existing timer
+    if (timerInterval) clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+        seconds++;
+        if (recordingTimer) {
+            recordingTimer.textContent = formatDuration(seconds);
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    if (recordingTimer) {
+        recordingTimer.classList.remove('visible');
+    }
+}
+
+// --- PROGRESS TRACKER UI LOGIC ---
+let accuracyChartInstance = null;
+
+async function updateProgressUI() {
+    console.log('Updating Progress UI...');
+
+    // Get stats from DB (Mock for now, will implement real query)
+    // We can pull all recordings and analyze them on the fly for MVP
+    const recordings = await dbManager.getAllRecordings();
+
+    let totalAccuracy = 0;
+    let countWithMetrics = 0;
+    let totalDuration = 0;
+
+    const dates = [];
+    const accuracies = [];
+    let totalSessions = 0; // Move here, will count filtered sessions
+
+    // Sort by date
+    recordings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const chartData = [];
+
+    // Populate Singer Select
+    const singerSelect = document.getElementById('singerSelect');
+    const selectedSinger = singerSelect ? singerSelect.value : 'all';
+    const singers = new Set();
+
+    // Pass 1: Collect Singers
+    if (singerSelect) {
+        // Save current selection if re-running
+        recordings.forEach(rec => {
+            if (rec.singer && rec.singer.trim() !== '') {
+                singers.add(rec.singer.trim());
+            }
+        });
+
+        // Rebuild options only if needed or generic
+        if (singerSelect.options.length <= 1 && singers.size > 0) {
+            singers.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                singerSelect.appendChild(opt);
+            });
+            // Re-attach event listener to trigger update
+            singerSelect.onchange = () => updateProgressUI();
+        }
+    }
+
+    recordings.forEach(rec => {
+        // FILTER: Check signer
+        if (selectedSinger !== 'all') {
+            if (!rec.singer || rec.singer.trim() !== selectedSinger) {
+                return; // Skip this recording
+            }
+        }
+
+        // If not skipped, count this session
+        totalSessions++;
+
+        const metrics = rec.metrics || (rec.metadata ? rec.metadata : null);
+
+        // Support both old "accuracy" and new "timeInTune"
+        let acc = undefined;
+        if (metrics) {
+            if (metrics.timeInTune !== undefined) acc = metrics.timeInTune;
+            else if (metrics.accuracy !== undefined) acc = metrics.accuracy;
+        }
+
+        if (acc !== undefined) {
+            totalAccuracy += acc;
+            countWithMetrics++;
+
+            dates.push(new Date(rec.date).toLocaleDateString());
+            accuracies.push(acc);
+        }
+        if (rec.duration) totalDuration += rec.duration;
+    });
+
+    const avgAccuracy = countWithMetrics > 0 ? (totalAccuracy / countWithMetrics).toFixed(1) : 0;
+    const hoursPracticed = (totalDuration / 3600).toFixed(2);
+
+    // Update DOM
+    const elTotal = document.getElementById('totalSessions');
+    if (elTotal) elTotal.textContent = totalSessions;
+
+    const elAvg = document.getElementById('avgAccuracy');
+    if (elAvg) elAvg.textContent = `${avgAccuracy}%`;
+
+    const elTime = document.getElementById('timePracticed');
+    if (elTime) elTime.textContent = `${hoursPracticed}h`;
+
+    // Update Chart - Group by Singer
+    const canvas = document.getElementById('accuracyChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    if (accuracyChartInstance) {
+        accuracyChartInstance.destroy();
+    }
+
+    // Group data by singer
+    const singerData = new Map();
+
+    recordings.forEach(rec => {
+        // Apply filter
+        if (selectedSinger !== 'all') {
+            if (!rec.singer || rec.singer.trim() !== selectedSinger) {
+                return;
+            }
+        }
+
+        const singer = rec.singer && rec.singer.trim() !== '' ? rec.singer.trim() : 'Unknown';
+        const metrics = rec.metrics || {};
+        const acc = metrics.timeInTune ?? metrics.accuracy;
+
+        if (typeof acc === 'number') {
+            if (!singerData.has(singer)) {
+                singerData.set(singer, []);
+            }
+            singerData.get(singer).push(acc);
+        }
+    });
+
+    // Calculate average accuracy per singer
+    const singerLabels = [];
+    const singerAccuracies = [];
+    const singerColors = [
+        '#6c5ce7', // Purple
+        '#00b894', // Green
+        '#fdcb6e', // Yellow
+        '#e17055', // Orange
+        '#74b9ff', // Blue
+        '#a29bfe', // Light Purple
+        '#fd79a8', // Pink
+        '#00cec9'  // Cyan
+    ];
+
+    let colorIndex = 0;
+    const datasets = [];
+
+    singerData.forEach((accuracies, singer) => {
+        const avgAcc = accuracies.reduce((sum, a) => sum + a, 0) / accuracies.length;
+        const color = singerColors[colorIndex % singerColors.length];
+
+        datasets.push({
+            label: singer,
+            data: [avgAcc],
+            backgroundColor: color,
+            borderColor: color,
+            borderWidth: 2
+        });
+
+        colorIndex++;
+    });
+
+    // If filtering by singer, show sessions over time for that singer
+    if (selectedSinger !== 'all' && datasets.length > 0) {
+        // Time series view for selected singer
+        const singerSessions = [];
+        recordings.forEach(rec => {
+            if (rec.singer && rec.singer.trim() === selectedSinger) {
+                const metrics = rec.metrics || {};
+                const acc = metrics.timeInTune ?? metrics.accuracy;
+                if (typeof acc === 'number') {
+                    singerSessions.push({
+                        date: new Date(rec.date).toLocaleDateString(),
+                        accuracy: acc
+                    });
+                }
+            }
+        });
+
+        singerSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        accuracyChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: singerSessions.map(s => s.date),
+                datasets: [{
+                    label: `${selectedSinger} - Accuracy per Session`,
+                    data: singerSessions.map(s => s.accuracy),
+                    backgroundColor: singerColors[0],
+                    borderColor: singerColors[0],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#a29bfe' },
+                        title: {
+                            display: true,
+                            text: 'Accuracy (%)',
+                            color: '#dfe6e9'
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a29bfe' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#dfe6e9' }
+                    }
+                }
+            }
+        });
+    } else {
+        // Comparison view across all singers
+        accuracyChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Average Accuracy'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#a29bfe' },
+                        title: {
+                            display: true,
+                            text: 'Accuracy (%)',
+                            color: '#dfe6e9'
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a29bfe' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#dfe6e9' }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff'
+                    }
+                }
+            }
+        });
+    }
+}
+
+

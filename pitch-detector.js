@@ -39,6 +39,9 @@ class PitchDetector {
                 }
             });
 
+            // Store stream for recording access
+            this.stream = stream;
+
             // Create audio context
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
                 sampleRate: this.sampleRate
@@ -209,7 +212,8 @@ class PitchDetector {
      * Convert frequency to musical note
      */
     frequencyToNote(frequency) {
-        const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+        // Use standard ASCII # for compatibility
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
         // Calculate semitones from A4
         const semitonesFromA4 = 12 * Math.log2(frequency / this.a4Frequency);
