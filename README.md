@@ -28,21 +28,54 @@ A Progressive Web App for real-time pitch detection and visualization, perfect f
 
 ### Running Locally
 
-1. **Simple HTTP Server (Python)**
-   ```bash
-   python -m http.server 8000
-   ```
-   Then open `http://localhost:8000`
+Choose one of the following methods to run PitchWiz on your computer:
 
-2. **Simple HTTP Server (Node.js)**
-   ```bash
-   npx http-server -p 8000
-   ```
-   Then open `http://localhost:8000`
+#### Option 1: Python (Recommended - Easiest)
 
-3. **VS Code Live Server**
-   - Install "Live Server" extension
-   - Right-click `index.html` → "Open with Live Server"
+**If you don't have Python installed:**
+1. Download Python from [python.org](https://www.python.org/downloads/)
+2. During installation, check "Add Python to PATH"
+3. Restart your terminal/command prompt
+
+**To run the app:**
+```bash
+# Navigate to the PitchWiz folder
+cd path/to/PitchWiz
+
+# Start the server
+python -m http.server 8000
+```
+Then open your browser to `http://localhost:8000`
+
+#### Option 2: Node.js
+
+**If you don't have Node.js installed:**
+1. Download Node.js from [nodejs.org](https://nodejs.org/)
+2. Install using the default settings
+3. Restart your terminal/command prompt
+
+**To run the app:**
+```bash
+# Navigate to the PitchWiz folder
+cd path/to/PitchWiz
+
+# Start the server (no installation needed)
+npx http-server -p 8000
+```
+Then open your browser to `http://localhost:8000`
+
+#### Option 3: VS Code Live Server (For Developers)
+
+1. Install [Visual Studio Code](https://code.visualstudio.com/)
+2. Install the "Live Server" extension
+3. Open the PitchWiz folder in VS Code
+4. Right-click `index.html` → "Open with Live Server"
+
+#### Option 4: Double-Click (Limited Functionality)
+
+⚠️ **Not Recommended** - Some features may not work due to browser security restrictions
+
+Simply double-click `index.html` to open it in your browser. However, microphone access and some features may be blocked.
 
 ### Using the App
 
