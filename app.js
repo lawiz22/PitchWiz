@@ -14,6 +14,12 @@ let minBufferSize = 10; // Minimum samples before displaying
 let voiceMode = false; // Voice mode for smoother averaging
 let voiceModeBufferSize = 50; // ~1 second at 50Hz update rate
 let recordingManager = null; // Recording manager instance
+let toneGenerator = null; // Tone generator for practice mode
+
+// Practice mode state
+let currentSinger = null;
+let calibrationState = { lowest: null, highest: null };
+let isCalibrating = false;
 
 // DOM Elements
 const startBtn = document.getElementById('startBtn');
@@ -431,12 +437,19 @@ function init() {
     // Set cursor style
     canvas.style.cursor = 'grab';
 
+
     // Close modal on outside click
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
             closeSettingsModal();
         }
     });
+
+    // Reset Library button (Development)
+    const resetLibraryBtn = document.getElementById('resetLibraryBtn');
+    if (resetLibraryBtn) {
+        resetLibraryBtn.addEventListener('click', clearAllRecordings);
+    }
 
     console.log('PitchWiz initialized');
 }
@@ -879,6 +892,68 @@ async function loadRecordings() {
                 </div>`;
             }
 
+            // Custom render for Intune Exercise (Unified Style)
+            if (rec.category === 'intune-exercise') {
+                const note = (rec.metadata && rec.metadata.targetNote) || (metrics.note) || '?';
+                const score = (metrics.accuracy !== undefined) ? metrics.accuracy : (rec.metadata ? rec.metadata.score : 0);
+                const color = getNoteColor(note.replace(/\d+/, '')); // Remove octave for color
+
+                return `
+                <div class="recording-item" data-id="${rec.id}">
+                    <div class="recording-info">
+                        <div class="recording-title" id="title-${rec.id}">
+                            ${rec.singer || 'Unknown'} 
+                            <span style="font-weight: normal; font-size: 0.9em; opacity: 0.7; margin-left: 8px;">Intune Practice</span>
+                        </div>
+                        <div class="recording-meta-row">
+                            <!-- Small Puck -->
+                            <div title="Target Note: ${note}" style="
+                                background-color: ${color}; 
+                                width: 24px; 
+                                height: 24px; 
+                                border-radius: 50%; 
+                                display: inline-flex; 
+                                align-items: center; 
+                                justify-content: center; 
+                                font-weight: bold; 
+                                font-size: 0.75rem;
+                                color: #fff;
+                                box-shadow: 0 0 5px ${color}80;
+                                margin-right: 8px;
+                            ">
+                                ${note}
+                            </div>
+                            <span>${new Date(rec.date).toLocaleString()}</span>
+                            <span class="meta-separator"></span>
+                            <span style="font-weight: bold; color: ${score >= 90 ? '#4CAF50' : score >= 70 ? '#2196F3' : '#FF9800'};">
+                                Score: ${score}%
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="recording-actions">
+                        <button class="action-btn play" onclick="playRecording(${rec.id})" title="Play">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn" onclick="openRenameModal(${rec.id}, '${(rec.name || '').replace(/'/g, "\\'")}', '${(rec.singer || '').replace(/'/g, "\\'")}')" title="Rename">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" onclick="deleteRecording(${rec.id})" title="Delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }
+
             return `
             <div class="recording-item" data-id="${rec.id}">
                 <div class="recording-info">
@@ -1080,6 +1155,11 @@ async function playRecording(id) {
         audioPlayer.addEventListener('ended', () => {
             updatePlayPauseIcon(false);
             cancelAnimationFrame(playbackAnimationId);
+            // Hide track info when playback ends
+            const playbackTrackInfo = document.getElementById('playbackTrackInfo');
+            if (playbackTrackInfo) {
+                playbackTrackInfo.style.display = 'none';
+            }
             // Keep controls open so user can replay
         });
 
@@ -1264,6 +1344,12 @@ function stopPlayback() {
     playbackControls.classList.remove('active');
     visualizer.clear();
     currentRecordingData = null;
+
+    // Hide track info when closing playback
+    const playbackTrackInfo = document.getElementById('playbackTrackInfo');
+    if (playbackTrackInfo) {
+        playbackTrackInfo.style.display = 'none';
+    }
 
     updateAppState(AppState.IDLE);
 }
@@ -1595,4 +1681,27 @@ async function updateProgressUI() {
     }
 }
 
+
+// Clear all recordings (Development tool)
+async function clearAllRecordings() {
+    if (!confirm('⚠️ WARNING: Delete ALL Recordings?\n\nThis will permanently delete all recordings from the library.\n\nThis action cannot be undone.\n\nAre you sure?')) {
+        return;
+    }
+
+    try {
+        if (typeof dbManager !== 'undefined' && dbManager.clearAllRecordings) {
+            await dbManager.clearAllRecordings();
+
+            // Refresh library view
+            await loadRecordings();
+
+            alert('✅ Library has been reset. All recordings deleted.');
+        } else {
+            alert('❌ Error: Database manager not available.');
+        }
+    } catch (error) {
+        console.error('Error clearing recordings:', error);
+        alert(`❌ Error clearing library: ${error.message}`);
+    }
+}
 

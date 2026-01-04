@@ -103,6 +103,8 @@ class PitchDetector {
         }
 
         this.isListening = false;
+        this.lastPitch = null; // Fix: Reset last pitch to prevent smoothing glide on next start
+        this.lastPitchData = null;
     }
 
     /**
@@ -112,6 +114,8 @@ class PitchDetector {
         // Calculate RMS to detect silence
         const rms = this.calculateRMS(buffer);
         if (rms < 0.01) {
+            this.lastPitchData = null; // Clear detected data
+            this.lastPitch = null; // Fix: Reset pitch state on silence to prevent gliding from previous note
             this.onPitchDetected(null);
             return;
         }
@@ -132,13 +136,18 @@ class PitchDetector {
             // Get note information
             const noteInfo = this.frequencyToNote(this.lastPitch);
 
-            this.onPitchDetected({
+            const pitchData = {
                 frequency: this.lastPitch,
                 note: noteInfo.note,
                 octave: noteInfo.octave,
                 cents: noteInfo.cents,
                 confidence: 1.0
-            });
+            };
+
+            // Store for external polling
+            this.lastPitchData = pitchData;
+
+            this.onPitchDetected(pitchData);
         } else {
             this.onPitchDetected(null);
         }

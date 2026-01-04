@@ -18,6 +18,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="profile-styles.css">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,6 +58,14 @@
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="8" fill="currentColor" />
                     </svg>
+                </button>
+                <button class="icon-btn" id="profileBtn" aria-label="Singer Profile" title="Singer Profile">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" />
+                        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
+                    </svg>
+                    <span class="profile-name" id="headerProfileName">Guest</span>
                 </button>
                 <button class="settings-btn" id="settingsBtn" aria-label="Settings">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,6 +130,7 @@
             <button class="nav-tab" data-mode="spectrogram">Spectrogram</button>
             <button class="nav-tab" data-mode="tuner">Tuner</button>
             <button class="nav-tab" data-mode="library">Library</button>
+            <button class="nav-tab" data-mode="practice">Practice</button>
             <button class="nav-tab" data-mode="progress">Progress</button>
         </nav>
 
@@ -162,6 +172,9 @@
                     <h2>Your recordings</h2>
                     <div class="library-filters">
                         <!-- Future: Search/Filter -->
+                        <button class="btn-danger" id="resetLibraryBtn" title="Clear all recordings (Development)">
+                            🗑️ Reset Library
+                        </button>
                     </div>
                 </div>
                 <div id="libraryList" class="library-list">
@@ -243,8 +256,149 @@
                 </div>
             </div>
 
+            <!-- Practice Modes View -->
+            <div id="practiceView" class="view-container" style="display: none;">
+                <div class="practice-header">
+                    <h2>🎵 Practice Modes</h2>
+                    <button class="btn-danger" onclick="resetPracticeProgress()" title="Reset all practice progress">
+                        🔄 Reset Progress
+                    </button>
+                </div>
+
+                <!-- Exercise Cards -->
+                <div class="exercise-cards">
+                    <div class="exercise-card">
+                        <div class="exercise-icon">🎯</div>
+                        <h3>Intune Exercises</h3>
+                        <p>Master each note in your range</p>
+                        <!-- Puck Grid Progress -->
+                        <div id="intunePuckGrid" class="intune-puck-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                        <p class="progress-text" style="display:none;"><span id="intuneCompleted">0</span>/<span
+                                id="intuneTotal">0</span> notes</p>
+                        <button class="btn-primary" onclick="startIntuneExercise()" id="btnStartIntune">Start
+                            Practice</button>
+                    </div>
+
+                    <div class="exercise-card disabled">
+                        <div class="exercise-icon">🎼</div>
+                        <h3>Interval Training</h3>
+                        <p>Coming Soon</p>
+                        <div class="coming-soon-badge">🔒 Coming Soon</div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
+
+        <!-- Range Calibration Modal -->
+        <div id="rangeCalibrationModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎵 Calibrate Your Vocal Range</h2>
+                    <button class="close-btn" onclick="closeRangeCalibration()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="calibration-instruction">Let's find your comfortable singing range!</p>
+
+                    <div class="calibration-step">
+                        <h3>Step 1: Lowest Note</h3>
+                        <p>Sing your lowest comfortable note and hold it</p>
+                        <button class="btn-calibrate" id="btnRecordLowest" onclick="recordLowestNote()">
+                            <span class="btn-icon">🎤</span>
+                            <span class="btn-text">Record Lowest Note</span>
+                        </button>
+                        <div class="detected-note" id="detectedLowest">--</div>
+                    </div>
+
+                    <div class="calibration-step">
+                        <h3>Step 2: Highest Note</h3>
+                        <p>Sing your highest comfortable note and hold it</p>
+                        <button class="btn-calibrate" id="btnRecordHighest" onclick="recordHighestNote()" disabled>
+                            <span class="btn-icon">🎤</span>
+                            <span class="btn-text">Record Highest Note</span>
+                        </button>
+                        <div class="detected-note" id="detectedHighest">--</div>
+                    </div>
+
+                    <div class="range-result" id="rangeResult" style="display: none;">
+                        <h3>✅ Your Range</h3>
+                        <p class="range-summary">
+                            <strong><span id="resultLowest">--</span> to <span id="resultHighest">--</span></strong>
+                            (<span id="resultCount">--</span> notes)
+                        </p>
+                        <button class="btn-primary" onclick="saveVocalRange()">Save & Continue</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Intune Exercise Modal -->
+        <div id="intuneExerciseModal" class="modal">
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <h2>🎯 Intune Practice</h2>
+                    <div id="exerciseHeaderInfo"
+                        style="font-size: 0.9rem; color: #888; font-weight: normal; margin-top: 5px;"></div>
+                    <button class="close-btn" onclick="closeIntuneExercise()">×</button>
+                </div>
+
+                <div class="exercise-layout">
+                    <!-- Left: Note Selection Grid -->
+                    <div class="note-grid-container">
+                        <h3>Select a Note</h3>
+                        <div id="noteGrid" class="note-grid">
+                            <!-- Notes will be populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Active Practice Area -->
+                    <div class="active-practice-area">
+                        <div class="target-note-display">
+                            <span id="targetNoteDisplay">--</span>
+                            <div class="freq-display" id="targetFreqDisplay">0 Hz</div>
+                        </div>
+
+                        <!-- Real-time Pitch Visualization -->
+                        <div class="practice-visualizer-container">
+                            <canvas id="practiceVisualizerCanvas" width="700" height="200"></canvas>
+                        </div>
+
+                        <div class="exercise-status" id="exerciseStatus">Select a note to start</div>
+
+                        <div class="exercise-controls">
+                            <button id="btnPlayTone" class="btn-primary" disabled onclick="playReferenceTone()">
+                                🔊 Play Tone
+                            </button>
+                            <button id="btnRecordExercise" class="btn-primary" disabled
+                                onclick="recordExerciseAttempt()">
+                                🎤 Sing Now
+                            </button>
+                            <button id="btnPrevNote" class="btn-secondary" onclick="selectPrevNote()">
+                                ⬅️ Prev
+                            </button>
+                            <button id="btnNextNote" class="btn-secondary" disabled onclick="selectNextNote()">
+                                Next ➡️
+                            </button>
+                        </div>
+
+                        <!-- Results Section -->
+                        <div id="exerciseResult" class="exercise-result" style="display: none;">
+                            <div class="score-circle">
+                                <span id="scoreValue">0%</span>
+                            </div>
+                            <p id="scoreFeedback">Good job!</p>
+                            <button id="btnSaveResult" class="btn-secondary"
+                                style="margin-top: 10px; width: 100%; display: none;"
+                                onclick="saveLastRecordingToLibrary()">💾 Save to Library</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Settings Modal -->
         <div class="modal" id="settingsModal">
@@ -355,14 +509,53 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content compact">
+            <div class="modal-header">
+                <h2>Singer Profile</h2>
+                <button class="icon-btn close-modal" id="closeProfileModal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-compact">
+                    <div class="profile-row">
+                        <strong id="currentProfileName">Loading...</strong>
+                        <span class="status-badge" id="profileCalibrationStatus">Not Calibrated</span>
+                    </div>
+                    <button class="btn primary compact" id="openCalibrationBtn">
+                        📊 Calibrate Range
+                    </button>
+                </div>
+
+                <div class="singer-list-section">
+                    <label>Switch Profile</label>
+                    <select id="singerListSelect" class="singer-select">
+                        <option value="">-- Select a singer --</option>
+                    </select>
+                    <div class="or-divider">or</div>
+                    <input type="text" id="profileSingerInput" placeholder="Create new profile">
+                    <button class="btn secondary compact" id="createProfileBtn">Create New</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="db-manager.js"></script>
     <script src="recording-manager.js"></script>
     <script src="progress-tracker.js"></script>
+    <script src="tone-generator.js"></script>
     <script src="pitch-detector.js"></script>
     <script src="visualizer.js"></script>
     <script src="app.js"></script>
+    <script src="practice-functions.js"></script>
+    <script src="practice-integration.js"></script>
 
     <!-- Service Worker Registration -->
     <script>

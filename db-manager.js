@@ -6,7 +6,7 @@
 class DBManager {
     constructor() {
         this.dbName = 'PitchWizDB';
-        this.version = 3; // Incremented for category index
+        this.version = 4; // Incremented for singerProfiles store
         this.db = null;
     }
 
@@ -59,6 +59,15 @@ class DBManager {
                 // Settings store: user preferences
                 if (!db.objectStoreNames.contains('settings')) {
                     db.createObjectStore('settings', { keyPath: 'key' });
+                }
+
+                // Singer Profiles store: vocal ranges for practice mode
+                if (!db.objectStoreNames.contains('singerProfiles')) {
+                    const profilesStore = db.createObjectStore('singerProfiles', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    profilesStore.createIndex('singer', 'singer', { unique: true });
                 }
             };
         });
@@ -307,7 +316,137 @@ class DBManager {
             });
         }
     }
+
+    /**
+     * Save or update singer profile with vocal range
+     */
+    async saveSingerProfile(singer, lowestNote, highestNote) {
+        const range = this.generateNoteRange(lowestNote, highestNote);
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['singerProfiles'], 'readwrite');
+            const store = transaction.objectStore('singerProfiles');
+            const index = store.index('singer');
+
+            // Check if profile already exists
+            const getRequest = index.get(singer);
+
+            getRequest.onsuccess = () => {
+                const existing = getRequest.result;
+                const profile = {
+                    singer: singer,
+                    lowestNote: lowestNote,
+                    highestNote: highestNote,
+                    range: range,
+                    dateCalibrated: new Date().toISOString()
+                };
+
+                if (existing) {
+                    // Update existing profile
+                    profile.id = existing.id;
+                    const updateRequest = store.put(profile);
+                    updateRequest.onsuccess = () => resolve(profile.id);
+                    updateRequest.onerror = () => reject(updateRequest.error);
+                } else {
+                    // Create new profile
+                    const addRequest = store.add(profile);
+                    addRequest.onsuccess = () => resolve(addRequest.result);
+                    addRequest.onerror = () => reject(addRequest.error);
+                }
+            };
+
+            getRequest.onerror = () => reject(getRequest.error);
+        });
+    }
+
+    /**
+     * Get singer profile by name
+     */
+    async getSingerProfile(singer) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['singerProfiles'], 'readonly');
+            const store = transaction.objectStore('singerProfiles');
+            const index = store.index('singer');
+            const request = index.get(singer);
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Generate array of notes between lowest and highest (inclusive)
+     */
+    generateNoteRange(lowestNote, highestNote) {
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Parse notes
+        const parseNote = (noteStr) => {
+            const match = noteStr.match(/^([A-G]#?)(\d+)$/);
+            if (!match) throw new Error(`Invalid note format: ${noteStr}`);
+            return {
+                note: match[1],
+                octave: parseInt(match[2])
+            };
+        };
+
+        const low = parseNote(lowestNote);
+        const high = parseNote(highestNote);
+
+        const range = [];
+        let currentOctave = low.octave;
+        let currentNoteIndex = notes.indexOf(low.note);
+
+        // Generate range
+        while (true) {
+            const currentNote = `${notes[currentNoteIndex]}${currentOctave}`;
+            range.push(currentNote);
+
+            // Check if we've reached the highest note
+            if (currentOctave === high.octave && notes[currentNoteIndex] === high.note) {
+                break;
+            }
+
+            // Move to next note
+            currentNoteIndex++;
+            if (currentNoteIndex >= notes.length) {
+                currentNoteIndex = 0;
+                currentOctave++;
+            }
+
+            // Safety check to prevent infinite loop
+            if (currentOctave > high.octave + 1) {
+                break;
+            }
+        }
+
+        return range;
+    }
+
+    /**
+     * Clear all recordings (Development tool)
+     */
+    async clearAllRecordings() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['recordings'], 'readwrite');
+            const store = transaction.objectStore('recordings');
+            const request = store.clear();
+
+            request.onsuccess = () => {
+                console.log('All recordings cleared from database');
+                resolve();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
 }
 
 // Export singleton instance
+// Export singleton instance
 const dbManager = new DBManager();
+window.dbManager = dbManager;
+
+// Initialize on load
+window.addEventListener('load', () => {
+    dbManager.init().then(() => console.log('DB Initialized')).catch(console.error);
+});
