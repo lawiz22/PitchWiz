@@ -493,6 +493,9 @@ function updateDashboardProgress() {
         }
         grid.appendChild(puck);
     });
+
+    // Render Accuracy Chart
+    renderAccuracyChart(scores);
 }
 
 function hexToRgba(hex, alpha) {
@@ -1479,4 +1482,97 @@ async function switchSinger(newSingerName) {
     // Clear the input
     const input = document.getElementById('profileSingerInput');
     if (input) input.value = '';
+}
+
+let accuracyNoteChartInstance = null;
+
+function renderAccuracyChart(scores) {
+    const ctx = document.getElementById('accuracyPerNoteChart');
+    if (!ctx) return;
+
+    // Filter notes that have actual scores
+    const notes = Object.keys(scores).filter(n => {
+        const val = scores[n];
+        const score = (typeof val === 'object' && val !== null) ? val.score : val;
+        return score !== undefined && score !== null;
+    }).sort((a, b) => {
+        const parseNote = (n) => {
+            const match = n.match(/([A-G]#?)(\d)/);
+            if (!match) return 0;
+            const semi = "C C# D D# E F F# G G# A A# B".split(' ').indexOf(match[1]);
+            const octave = parseInt(match[2]);
+            return octave * 12 + semi;
+        };
+        return parseNote(a) - parseNote(b);
+    });
+
+    if (notes.length === 0) {
+        if (accuracyNoteChartInstance) {
+            accuracyNoteChartInstance.destroy();
+            accuracyNoteChartInstance = null;
+        }
+        return;
+    }
+
+    const dataValues = notes.map(n => {
+        const val = scores[n];
+        return (typeof val === 'object' && val !== null) ? val.score : val;
+    });
+
+    const backgroundColors = notes.map(n => {
+        const noteName = n.match(/[A-G]#?/)[0];
+        return NOTE_COLORS[noteName] || '#999';
+    });
+
+    // Border colors (slightly lighter/darker)
+    const borderColors = notes.map(n => {
+        return '#ffffff';
+    });
+
+    if (accuracyNoteChartInstance) {
+        accuracyNoteChartInstance.destroy();
+    }
+
+    if (typeof Chart === 'undefined') return;
+
+    accuracyNoteChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: notes,
+            datasets: [{
+                label: 'Accuracy (%)',
+                data: dataValues,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                barPercentage: 0.8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#a0a0a0' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#a0a0a0' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return `Accuracy: ${context.parsed.y}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

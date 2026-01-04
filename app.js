@@ -1519,6 +1519,18 @@ async function updateProgressUI() {
 
     const ctx = canvas.getContext('2d');
 
+    // Update Accuracy per Note Chart (if function exists)
+    if (typeof renderAccuracyChart === 'function') {
+        const selectedSingerVal = selectedSinger !== 'all' ? selectedSinger : null;
+        let scores = {};
+        if (selectedSingerVal) {
+            try {
+                scores = JSON.parse(localStorage.getItem(`pitchWiz_scores_${selectedSingerVal}`) || '{}');
+            } catch (e) { console.error('Error loading scores', e); }
+        }
+        renderAccuracyChart(scores);
+    }
+
     if (accuracyChartInstance) {
         accuracyChartInstance.destroy();
     }
