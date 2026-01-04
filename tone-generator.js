@@ -63,9 +63,9 @@ class ToneGenerator {
      * Play a note for a specified duration
      * @param {string} noteName - Note to play (e.g., "A4", "C#3")
      * @param {number} duration - Duration in seconds
-     * @param {number} volume - Volume (0 to 1), default 0.3
+     * @param {number} volume - Volume (0 to 1), default 0.15 (softer)
      */
-    async playNote(noteName, duration = 5, volume = 0.3) {
+    async playNote(noteName, duration = 5, volume = 0.15) {
         // Stop any currently playing tone
         this.stop();
 
@@ -88,10 +88,10 @@ class ToneGenerator {
             this.oscillator.type = 'sine'; // Pure sine wave for reference tone
             this.oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
 
-            // Configure gain (volume)
+            // Configure gain (volume) with gentler envelope
             this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-            this.gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.05); // Fade in
-            this.gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime + duration - 0.05);
+            this.gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.1); // Slower fade in
+            this.gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime + duration - 0.1);
             this.gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + duration); // Fade out
 
             // Connect nodes

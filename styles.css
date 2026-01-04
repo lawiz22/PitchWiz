@@ -1769,6 +1769,362 @@ body {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
     text-align: center;
+    margin-bottom: var(--spacing-sm);
 }
 
-     
+/* =========================================
+   INTERVAL PRACTICE STYLES
+   ========================================= */
+
+/* Configuration Modal */
+.level-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.level-card {
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.level-card:hover {
+    background: var(--color-bg-tertiary);
+    transform: translateY(-2px);
+}
+
+.level-card.selected {
+    border-color: var(--color-accent-primary);
+    background: rgba(108, 92, 231, 0.1);
+    box-shadow: 0 0 15px rgba(108, 92, 231, 0.15);
+}
+
+.lvl-icon {
+    font-size: 1.5rem;
+}
+
+.lvl-info strong {
+    display: block;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.lvl-info span {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.direction-toggle {
+    display: flex;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    gap: 4px;
+    border: 1px solid var(--color-bg-tertiary);
+}
+
+.toggle-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.toggle-btn.active {
+    background: var(--color-bg-primary);
+    color: var(--color-accent-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+}
+
+/* Active Practice Interface */
+.practice-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--color-bg-tertiary);
+    background: var(--color-bg-secondary);
+}
+
+.practice-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#intervalLevelBadge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+}
+
+#intervalNameDisplay {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.practice-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent-primary);
+    background: rgba(108, 92, 231, 0.1);
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+
+.interval-visualizer {`r`n    width: 100%;`r`n    max-width: 600px;`r`n    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(108, 92, 231, 0.05) 0%, transparent 70%);
+}
+
+.interval-pucks {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.note-puck {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-secondary);
+    border: 4px solid var(--color-bg-tertiary);
+    position: relative;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.note-val {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+}
+
+.note-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.interval-arrow {
+    font-size: 2rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+.instruction-text {
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.4;
+}
+
+.practice-controls-bar {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-bg-tertiary);
+}
+
+.control-btn {
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-btn.primary {
+    background: var(--color-accent-primary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+.control-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+}
+
+.control-btn.secondary {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.control-btn.secondary:hover {
+    background: var(--color-bg-primary);
+}
+
+.control-btn.recording {
+    background: #FF4444;
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+    }
+}
+
+/* Fullscreen Modal Override */
+.modal-content.fullscreen-content {`r`n    width: 100%;`r`n    height: 100%;`r`n    max-width: none;`r`n    border-radius: 0;`r`n    display: flex;`r`n    overflow: auto;`r`n}
+/* Ensure Save Modal is above Fullscreen Interval Modal */
+#saveRecordingModal {
+    z-index: 2000;
+}
+
+
+/* Interval Practice Layout Fix */
+.modal-content.fullscreen-content {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.interval-visualizer {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 700px;
+    margin: 20px auto 0 auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.interval-pucks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-top: auto;
+    margin-bottom: 40px;
+}
+
+/* Smaller Interval Pucks */
+.note-puck {
+    width: 100px !important;
+    height: 100px !important;
+    font-size: 24px !important;
+}
+.note-puck .note-val {
+    font-size: 22px !important;
+}
+.note-puck .note-label {
+    font-size: 11px !important;
+}
+
+/* Ensure interval buttons are visible */
+.interval-pucks + * {
+    display: flex !important;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Show interval buttons container */
+#btnRecordInterval, #btnSaveInterval, #btnRetryInterval {
+    display: inline-flex !important;
+}
+
+
+/* Ensure button container is visible */
+.interval-actions {
+    display: flex !important;
+    gap: 15px;
+    justify-content: center;
+    padding: 20px;
+    margin-top: auto;
+}
+
+/* Compact Interval Practice Layout */
+.note-puck {
+    width: 60px !important;
+    height: 60px !important;
+}
+.note-puck .note-val {
+    font-size: 18px !important;
+}
+.note-puck .note-label {
+    font-size: 9px !important;
+    margin-top: 2px !important;
+}
+.interval-arrow {
+    font-size: 20px !important;
+}
+.instruction-text {
+    font-size: 14px !important;
+    margin: 5px 0 !important;
+}
+.interval-visualizer {
+    gap: 10px !important;
+    margin: 10px auto 0 auto !important;
+}
+.interval-pucks {
+    gap: 20px !important;
+    margin-top: 10px !important;
+    margin-bottom: 15px !important;
+}
+.interval-actions {
+    padding: 10px !important;
+    margin-top: 10px !important;
+}
+.control-btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+}

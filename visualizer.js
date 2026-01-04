@@ -105,6 +105,13 @@ class Visualizer {
     }
 
     /**
+     * Set zoom level (1.0 = normal)
+     */
+    setZoom(zoom) {
+        this.zoomLevel = Math.max(0.5, Math.min(3.0, zoom));
+    }
+
+    /**
      * Set note range for pitch diagram
      */
     setNoteRange(minNote, maxNote) {

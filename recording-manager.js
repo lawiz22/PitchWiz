@@ -200,7 +200,7 @@ class RecordingManager {
             ...this.tempData,
             name: name || `Recording #${Date.now()}`,
             singer: singer || 'Unknown',
-            category: category || 'freestyle',
+            category: category || this.tempData.category || 'freestyle',
             // Session ID could be added here later
         };
 

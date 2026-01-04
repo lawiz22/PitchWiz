@@ -295,11 +295,11 @@
                             Practice</button>
                     </div>
 
-                    <div class="exercise-card disabled">
+                    <div class="exercise-card">
                         <div class="exercise-icon">🎼</div>
                         <h3>Interval Training</h3>
-                        <p>Coming Soon</p>
-                        <div class="coming-soon-badge">🔒 Coming Soon</div>
+                        <p>Practice intervals from easy steps to difficult leaps.</p>
+                        <button class="btn-primary" onclick="openIntervalSetup()">Setup Practice</button>
                     </div>
                 </div>
             </div>
@@ -578,29 +578,158 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="db-manager.js"></script>
-    <script src="recording-manager.js"></script>
-    <script src="progress-tracker.js"></script>
-    <script src="tone-generator.js"></script>
-    <script src="pitch-detector.js"></script>
-    <script src="visualizer.js"></script>
-    <script src="app.js"></script>
-    <script src="practice-functions.js"></script>
-    <script src="practice-integration.js"></script>
-    <script src="export-import.js"></script>
+    <!-- Interval Configuration Modal -->
+    <div id="intervalConfigModal" class="modal">
+        <div class="modal-content compact">
+            <div class="modal-header">
+                <h2>Interval Practice Setup</h2>
+                <button class="icon-btn close-modal" onclick="closeIntervalConfig()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Difficulty Level</label>
+                    <div class="level-cards">
+                        <div class="level-card" onclick="selectLevel('beginner')" id="lvl_beginner">
+                            <div class="lvl-icon">🟢</div>
+                            <div class="lvl-info">
+                                <strong>Beginner</strong>
+                                <span>Steps (2nd)</span>
+                            </div>
+                        </div>
+                        <div class="level-card" onclick="selectLevel('intermediate')" id="lvl_intermediate">
+                            <div class="lvl-icon">🟡</div>
+                            <div class="lvl-info">
+                                <strong>Intermediate</strong>
+                                <span>Basic (3rd/5th)</span>
+                            </div>
+                        </div>
+                        <div class="level-card" onclick="selectLevel('advanced')" id="lvl_advanced">
+                            <div class="lvl-icon">🟠</div>
+                            <div class="lvl-info">
+                                <strong>Advanced</strong>
+                                <span>Tension (4th/6th)</span>
+                            </div>
+                        </div>
+                        <div class="level-card" onclick="selectLevel('expert')" id="lvl_expert">
+                            <div class="lvl-icon">🔴</div>
+                            <div class="lvl-info">
+                                <strong>Expert</strong>
+                                <span>Leaps (7th/Oct)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(reg => console.log('Service Worker registered'))
-                    .catch(err => console.log('Service Worker registration failed'));
-            });
-        }
-    </script>
+                <div class="form-group">
+                    <label>Direction</label>
+                    <div class="direction-toggle">
+                        <button class="toggle-btn active" onclick="selectDirection('asc')" id="dir_asc">Ascending
+                            ↗️</button>
+                        <button class="toggle-btn" onclick="selectDirection('desc')" id="dir_desc">Descending
+                            ↘️</button>
+                        <button class="toggle-btn" onclick="selectDirection('random')" id="dir_random">Random
+                            🔀</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions centered">
+                    <button class="btn primary" onclick="startIntervalSession()">Start Practice</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interval Active Practice View (Modal) -->
+    <div id="intervalPracticeModal" class="modal fullscreen">
+        <div class="modal-content fullscreen-content">
+            <div class="practice-header-bar">
+                <button class="icon-btn" onclick="closeIntervalPractice()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="practice-title">
+                    <span id="intervalLevelBadge">Intermediate</span>
+                    <span id="intervalNameDisplay">Waiting...</span>
+                </div>
+                <div class="practice-score" id="intervalScoreDisplay">0%</div>
+            </div>
+
+            <div class="interval-visualizer">
+                <div class="interval-visualizer">
+                    <!-- Scrolling Pitch Diagram -->
+                    <canvas id="intervalCanvas" width="500" height="200"
+                        style="width: 100%; height: 200px; border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 20px;"></canvas>
+
+                    <!-- Large Pucks for visual feedback -->
+                    <div class="interval-pucks">
+                        <div class="note-puck reference" id="refPuck">
+                            <span class="note-val">C3</span>
+                            <span class="note-label">Reference</span>
+                        </div>
+                        <div class="interval-arrow">➝</div>
+                        <div class="note-puck target" id="targetPuck">
+                            <span class="note-val">?</span>
+                            <span class="note-label">Target</span>
+                        </div>
+                    </div>
+                    <div class="instruction-text" id="intervalInstruction">Listen to the reference note...</div>
+                </div>
+
+                <div class="practice-controls-bar">
+                    <button class="control-btn secondary" onclick="replayReference()">
+                        👂 Hear Reference
+                    </button>
+                    <button class="control-btn secondary" onclick="playTargetTone()"
+                        title="Cheat: Hear the target note">
+                        🎯 Target Tone
+                    </button>
+                    <button class="control-btn primary" id="btnRecordInterval" onclick="toggleIntervalRecording()">
+                        🔴 Sing
+                    </button>
+                    <button class="control-btn primary" id="btnSaveInterval" style="display: none;"
+                        onclick="triggerIntervalSave()">
+                        💾 Save
+                    </button>
+                    <button class="control-btn secondary" id="btnRetryInterval" style="display: none;"
+                        onclick="retryInterval()">
+                        🔄 Retry
+                    </button>
+                    <button class="control-btn secondary" onclick="nextInterval()">
+                        Next ➡️
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="db-manager.js"></script>
+        <script src="recording-manager.js"></script>
+        <script src="progress-tracker.js"></script>
+        <script src="tone-generator.js"></script>
+        <script src="pitch-detector.js"></script>
+        <script src="visualizer.js"></script>
+        <script src="app.js"></script>
+        <script src="practice-functions.js"></script>
+        <script src="interval-functions.js"></script>
+        <script src="practice-integration.js"></script>
+        <script src="export-import.js"></script>
+
+        <!-- Service Worker Registration -->
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('service-worker.js')
+                        .then(reg => console.log('Service Worker registered'))
+                        .catch(err => console.log('Service Worker registration failed'));
+                });
+            }
+        </script>
 </body>
 
 </html>

@@ -136,6 +136,7 @@ function init() {
         onPitchDetected: handlePitchDetected,
         onError: handleError
     });
+    window.pitchDetector = pitchDetector;
 
     // Initialize database
     dbManager.init().then(() => {
@@ -716,7 +717,13 @@ if (closeSaveModalBtn) {
  */
 function handlePitchDetected(pitchData) {
     // Always pass data to visualizer (for live mode support)
+    // Always pass data to visualizer (for live mode support)
     visualizer.addPitchData(pitchData);
+
+    // Interval Practice Hook
+    if (typeof checkIntervalPractice === 'function') {
+        checkIntervalPractice(pitchData);
+    }
 
     // Add to recording if active
     if (recordingManager && recordingManager.isRecording) {
