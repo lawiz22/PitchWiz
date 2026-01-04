@@ -439,6 +439,42 @@ class DBManager {
             request.onerror = () => reject(request.error);
         });
     }
+
+    /**
+     * Get recording audio blob by ID
+     */
+    async getRecordingBlob(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['recordings'], 'readonly');
+            const store = transaction.objectStore('recordings');
+            const request = store.get(id);
+
+            request.onsuccess = () => {
+                const recording = request.result;
+                resolve(recording ? recording.audioBlob : null);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Get all singer profiles
+     */
+    async getAllProfiles() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['singerProfiles'], 'readonly');
+            // Check if store exists (might be old version)
+            if (!this.db.objectStoreNames.contains('singerProfiles')) {
+                resolve([]);
+                return;
+            }
+            const store = transaction.objectStore('singerProfiles');
+            const request = store.getAll();
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
 }
 
 // Export singleton instance

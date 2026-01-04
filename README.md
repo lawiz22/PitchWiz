@@ -96,6 +96,19 @@ Simply double-click `index.html` to open it in your browser. However, microphone
 - Tap the share/menu button
 - Select "Add to Home Screen"
 
+### Backup & Restore (Export/Import)
+
+**To Backup your Library:**
+1. Go to the **Library** tab
+2. Click **📦 Export**
+3. A ZIP file containing all your recordings (audio + data) and settings will be downloaded.
+
+**To Restore your Library:**
+1. Go to the **Library** tab
+2. Click **📥 Import**
+3. Select your previously exported ZIP file
+4. The app will intelligently import new recordings and merge your profiles/settings (skipping duplicates).
+
 ## Project Structure
 
 ```

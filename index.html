@@ -24,6 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- JSZip Library for Export/Import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
@@ -170,10 +173,16 @@
             <div id="libraryView" class="library-view" style="display: none;">
                 <div class="library-header">
                     <h2>Your recordings</h2>
-                    <div class="library-filters">
-                        <!-- Future: Search/Filter -->
-                        <button class="btn-danger" id="resetLibraryBtn" title="Clear all recordings (Development)">
-                            🗑️ Reset Library
+                    <div class="library-actions">
+                        <button class="btn secondary" id="btnExportLibrary" title="Export library to ZIP">
+                            📦 Export
+                        </button>
+                        <button class="btn secondary" id="btnImportLibrary" title="Import library from ZIP">
+                            📥 Import
+                        </button>
+                        <input type="file" id="importFileInput" accept=".zip" style="display: none;">
+                        <button class="btn-danger" id="resetLibraryBtn" title="Clear all recordings">
+                            🗑️ Reset
                         </button>
                     </div>
                 </div>
@@ -545,6 +554,25 @@
         </div>
     </div>
 
+    <!-- Export/Import Progress Modal -->
+    <div id="exportImportModal" class="modal">
+        <div class="modal-content compact">
+            <div class="modal-header">
+                <h2 id="exportImportTitle">Processing...</h2>
+            </div>
+            <div class="modal-body">
+                <div class="progress-container">
+                    <div class="progress-bar" id="exportImportProgress"></div>
+                </div>
+                <p id="exportImportStatus">Preparing...</p>
+                <div class="modal-actions" style="margin-top: 15px; justify-content: center;">
+                    <button class="btn primary" id="btnCloseExportImport" style="display: none;"
+                        onclick="document.getElementById('exportImportModal').style.display='none'">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="db-manager.js"></script>
@@ -556,6 +584,7 @@
     <script src="app.js"></script>
     <script src="practice-functions.js"></script>
     <script src="practice-integration.js"></script>
+    <script src="export-import.js"></script>
 
     <!-- Service Worker Registration -->
     <script>
