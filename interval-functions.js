@@ -604,7 +604,7 @@ setTimeout(() => {
 
                 // Vertical drag = vertical pan
                 const currentPan = intervalState.visualizer.verticalPan || 0;
-                const panChange = deltaY * 0.2;
+                const panChange = deltaY * 0.05;
                 intervalState.visualizer.verticalPan = currentPan + panChange;
             }
         }, { passive: false });
