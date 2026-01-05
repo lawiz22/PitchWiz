@@ -131,8 +131,8 @@ function init() {
 
     // Create pitch detector
     pitchDetector = new PitchDetector({
-        a4Frequency: parseInt(a4FrequencyInput.value),
-        smoothingFactor: parseInt(smoothingInput.value) / 100,
+        a4Frequency: parseInt(a4FrequencyInput?.value || 440),
+        smoothingFactor: parseInt(smoothingInput?.value || 70) / 100,
         onPitchDetected: handlePitchDetected,
         onError: handleError
     });
