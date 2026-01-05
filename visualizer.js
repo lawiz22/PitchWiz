@@ -224,8 +224,8 @@ class Visualizer {
     updateAutoZoom() {
         if (!this.autoZoom) return;
 
-        // 1. Analyze Active Range (Last ~3 seconds = 180 frames at 60fps)
-        const lookbackFrames = 180;
+        // 1. Analyze Active Range (Last ~2 seconds = 120 frames at 60fps)
+        const lookbackFrames = 120;
         const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.frequency && p.frequency > 0);
 
         if (recentPitches.length < 10) {
