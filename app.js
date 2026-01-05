@@ -154,6 +154,11 @@ function init() {
         // Setup Audio Context for playback
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         console.log('Database, Recording Manager and Progress Tracker initialized');
+
+        // Initialize Profile UI after DB is ready
+        if (typeof window.populateProfileSelector === 'function') {
+            window.populateProfileSelector();
+        }
     }).catch(error => {
         console.error('Failed to initialize database:', error);
     });
@@ -627,8 +632,8 @@ function init() {
         });
     }
 
-    // 3. Populate Profile Selector
-    async function populateProfileSelector() {
+    // 3. Populate Profile Selector (Exposed Globally)
+    window.populateProfileSelector = async function () {
         if (!profileSelect) return;
 
         try {
@@ -645,10 +650,13 @@ function init() {
                 if (p.singer === currentSinger) option.selected = true;
                 profileSelect.appendChild(option);
             });
+            console.log(`Populated profile selector with ${profiles.length} profiles.`);
         } catch (e) {
             console.error('Error loading profiles', e);
         }
-    }
+    };
+
+    // 4. Handle Profile Change
 
     // 4. Handle Profile Change
     if (profileSelect) {
@@ -684,7 +692,7 @@ function init() {
 
     // Initial calls
     updateSingerGreeting();
-    populateProfileSelector();
+    // populateProfileSelector(); // Moved to dbManager.init() callback
 
     // Zoom level slider
     zoomLevelInput.addEventListener('input', (e) => {
