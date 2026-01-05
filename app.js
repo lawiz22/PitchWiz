@@ -1401,24 +1401,32 @@ async function playRecording(id) {
         // --- AUDIO ROUTING FOR VISUALIZER ---
         // Connect playback audio to visualizer's analyser so spectrogram/tuner work
 
+        // CLEANUP: Close previous playback context if it exists
+        if (window.activePlaybackContext) {
+            try {
+                if (window.activePlaybackContext.state !== 'closed') {
+                    await window.activePlaybackContext.close();
+                }
+            } catch (e) { console.warn('Error closing prev context', e); }
+            window.activePlaybackContext = null;
+        }
+
         let playbackContext = null;
         let playbackAnalyser = null;
 
-        // Use existing context if available (and not closed), otherwise create new one
-        if (pitchDetector && pitchDetector.audioContext && pitchDetector.audioContext.state !== 'closed') {
-            playbackContext = pitchDetector.audioContext;
-            playbackAnalyser = pitchDetector.analyser;
-        } else {
-            // Create dedicated context for playback if mic is off
+        // ALWAYS create a fresh context for playback to ensure clean state
+        // (Reusing pitchDetector context causes issues on mobile after ToneGenerator usage)
+        try {
             playbackContext = new (window.AudioContext || window.webkitAudioContext)();
+            window.activePlaybackContext = playbackContext; // Store globally for cleanup
+
             playbackAnalyser = playbackContext.createAnalyser();
             playbackAnalyser.fftSize = 8192;
             playbackAnalyser.smoothingTimeConstant = 0;
+
             // Update visualizer to use this new analyser
             if (visualizer) visualizer.setAnalyser(playbackAnalyser);
-        }
 
-        if (playbackContext && playbackAnalyser) {
             // Create source from the new audio element
             const source = playbackContext.createMediaElementSource(audioPlayer);
 
@@ -1428,10 +1436,13 @@ async function playRecording(id) {
             // Connect to destination (speakers) so we can hear it
             source.connect(playbackContext.destination);
 
-            // Resume context if suspended
+            // Resume context (Mobile requires this after user gesture)
             if (playbackContext.state === 'suspended') {
                 await playbackContext.resume();
             }
+        } catch (e) {
+            console.error("Error setting up playback audio context:", e);
+            // Fallback: Play audio without visualizer if context fails
         }
         // ------------------------------------
         // ------------------------------------
