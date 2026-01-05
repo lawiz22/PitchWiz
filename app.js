@@ -440,19 +440,43 @@ function init() {
         });
     }
 
-    // Voice mode checkbox
-    const voiceModeCheckbox = document.getElementById('voiceMode');
-    voiceModeCheckbox.addEventListener('change', (e) => {
-        voiceMode = e.target.checked;
-        // Adjust buffer size based on voice mode
-        if (voiceMode) {
-            pitchBufferSize = voiceModeBufferSize;
-        } else {
-            pitchBufferSize = 30;
-        }
-        // Clear buffer when switching modes
-        pitchBuffer = [];
-    });
+    // Smoothing slider with value display
+    const smoothingInput = document.getElementById('smoothing');
+    const smoothingValue = document.getElementById('smoothingValue');
+    if (smoothingInput && smoothingValue) {
+        smoothingInput.addEventListener('input', (e) => {
+            smoothingValue.textContent = e.target.value;
+        });
+    }
+
+    // View mode selector in settings
+    const viewModeSelect = document.getElementById('viewModeSelect');
+    if (viewModeSelect) {
+        viewModeSelect.addEventListener('change', (e) => {
+            const mode = e.target.value;
+            visualizer.setMode(mode);
+            // Update action bar view switcher
+            const currentViewModeDisplay = document.getElementById('currentViewMode');
+            const modeNames = {
+                'pitch-diagram': 'Pitch',
+                'spectrogram': 'Spectro',
+                'tuner': 'Tuner'
+            };
+            if (currentViewModeDisplay) {
+                currentViewModeDisplay.textContent = modeNames[mode] || 'Pitch';
+            }
+        });
+    }
+
+    // Detection mode selector in settings
+    const detectionModeSelect = document.getElementById('detectionModeSelect');
+    if (detectionModeSelect) {
+        detectionModeSelect.addEventListener('change', (e) => {
+            const mode = e.target.value;
+            // Update detection mode logic here if needed
+            console.log('Detection mode changed to:', mode);
+        });
+    }
 
     // Tuning tolerance slider
     const tuningToleranceInput = document.getElementById('tuningTolerance');
