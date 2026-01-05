@@ -264,7 +264,7 @@ function init() {
     let currentViewModeIndex = 0;
 
     if (viewModeSwitcher) {
-        viewModeSwitcher.addEventListener('click', () => {
+        const handleViewModeSwitch = () => {
             // Cycle to next mode
             currentViewModeIndex = (currentViewModeIndex + 1) % viewModes.length;
             const newMode = viewModes[currentViewModeIndex];
@@ -288,6 +288,12 @@ function init() {
                 if (noteDisplay) noteDisplay.style.display = 'none';
                 if (waveformGainControl) waveformGainControl.style.display = 'none';
             }
+        };
+
+        viewModeSwitcher.addEventListener('click', handleViewModeSwitch);
+        viewModeSwitcher.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleViewModeSwitch();
         });
     }
 
@@ -309,11 +315,17 @@ function init() {
 
     // Open tuning reference modal
     if (tuningRefBtn) {
-        tuningRefBtn.addEventListener('click', () => {
+        const handleTuningRefOpen = () => {
             if (tuningRefModal && tuningRefInput) {
                 tuningRefInput.value = pitchDetector.referenceFrequency;
                 tuningRefModal.classList.add('active');
             }
+        };
+
+        tuningRefBtn.addEventListener('click', handleTuningRefOpen);
+        tuningRefBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleTuningRefOpen();
         });
     }
 

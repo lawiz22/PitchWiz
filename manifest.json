@@ -2,13 +2,13 @@
     "name": "PitchWiz",
     "short_name": "PitchWiz",
     "description": "Real-time pitch detection and visualization tool for musicians",
-    "start_url": "/",
+    "start_url": "/PitchWiz/",
     "display": "standalone",
     "background_color": "#0f0f1e",
     "theme_color": "#1a1a2e",
     "orientation": "portrait-primary",
-    "id": "/",
-    "scope": "/",
+    "id": "/PitchWiz/",
+    "scope": "/PitchWiz/",
     "icons": [
         {
             "src": "icon-192.png",
