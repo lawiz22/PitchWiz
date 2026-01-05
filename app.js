@@ -545,68 +545,73 @@ function init() {
     }
 
     // Tuning tolerance slider
-    const tuningToleranceInput = document.getElementById('tuningTolerance');
-    const tuningToleranceValue = document.getElementById('tuningToleranceValue');
-    tuningToleranceInput.addEventListener('input', (e) => {
-        tuningThreshold = parseInt(e.target.value);
-        window.tuningThreshold = tuningThreshold; // Update global
-        tuningToleranceValue.textContent = `${tuningThreshold}¢`;
-    });
-    // Populate note range selectors (C0 to C8)
-    const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
-    for (let octave = 0; octave <= 8; octave++) {
-        for (let noteIndex = 0; noteIndex < 12; noteIndex++) {
-            const midiNote = (octave + 1) * 12 + noteIndex;
-            const noteName = `${noteNames[noteIndex]}${octave}`;
-
-            // Add to min selector
-            const minOption = document.createElement('option');
-            minOption.value = midiNote;
-            minOption.textContent = noteName;
-            if (midiNote === 24) minOption.selected = true; // C1 default
-            minNoteSelect.appendChild(minOption);
-
-            // Add to max selector
-            const maxOption = document.createElement('option');
-            maxOption.value = midiNote;
-            maxOption.textContent = noteName;
-            if (midiNote === 72) maxOption.selected = true; // C5 default
-            maxNoteSelect.appendChild(maxOption);
-        }
+    if (tuningToleranceInput && tuningToleranceValue) {
+        tuningToleranceInput.addEventListener('input', (e) => {
+            tuningThreshold = parseInt(e.target.value);
+            window.tuningThreshold = tuningThreshold; // Update global
+            tuningToleranceValue.textContent = `${tuningThreshold}¢`;
+        });
     }
 
-    // Note range change listeners
-    minNoteSelect.addEventListener('change', () => {
-        const minNote = parseInt(minNoteSelect.value);
-        const maxNote = parseInt(maxNoteSelect.value);
-        if (minNote < maxNote) {
-            visualizer.setNoteRange(minNote, maxNote);
-        } else {
-            alert('Minimum note must be lower than maximum note');
-            minNoteSelect.value = visualizer.minNote;
-        }
-    });
+    // Populate note range selectors (C0 to C8)
+    if (minNoteSelect && maxNoteSelect) {
+        const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+        for (let octave = 0; octave <= 8; octave++) {
+            for (let noteIndex = 0; noteIndex < 12; noteIndex++) {
+                const midiNote = (octave + 1) * 12 + noteIndex;
+                const noteName = `${noteNames[noteIndex]}${octave}`;
 
-    maxNoteSelect.addEventListener('change', () => {
-        const minNote = parseInt(minNoteSelect.value);
-        const maxNote = parseInt(maxNoteSelect.value);
-        if (maxNote > minNote) {
-            visualizer.setNoteRange(minNote, maxNote);
-        } else {
-            alert('Maximum note must be higher than minimum note');
-            maxNoteSelect.value = visualizer.maxNote;
+                // Add to min selector
+                const minOption = document.createElement('option');
+                minOption.value = midiNote;
+                minOption.textContent = noteName;
+                if (midiNote === 24) minOption.selected = true; // C1 default
+                minNoteSelect.appendChild(minOption);
+
+                // Add to max selector
+                const maxOption = document.createElement('option');
+                maxOption.value = midiNote;
+                maxOption.textContent = noteName;
+                if (midiNote === 72) maxOption.selected = true; // C5 default
+                maxNoteSelect.appendChild(maxOption);
+            }
         }
-    });
+
+        // Note range change listeners
+        minNoteSelect.addEventListener('change', () => {
+            const minNote = parseInt(minNoteSelect.value);
+            const maxNote = parseInt(maxNoteSelect.value);
+            if (minNote < maxNote) {
+                visualizer.setNoteRange(minNote, maxNote);
+            } else {
+                alert('Minimum note must be lower than maximum note');
+                minNoteSelect.value = visualizer.minNote;
+            }
+        });
+
+        maxNoteSelect.addEventListener('change', () => {
+            const minNote = parseInt(minNoteSelect.value);
+            const maxNote = parseInt(maxNoteSelect.value);
+            if (maxNote > minNote) {
+                visualizer.setNoteRange(minNote, maxNote);
+            } else {
+                alert('Maximum note must be higher than minimum note');
+                maxNoteSelect.value = visualizer.maxNote;
+            }
+        });
+    }
 
     // Detection mode toggle
-    detectionModeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            detectionModeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const mode = btn.dataset.detectionMode;
-            visualizer.setDetectionMode(mode);
+    if (detectionModeBtns.length > 0) {
+        detectionModeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                detectionModeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.detectionMode;
+                if (visualizer) visualizer.setDetectionMode(mode);
+            });
         });
-    });
+    }
 
     // --- SINGER PROFILE UI ---
     const singerGreeting = document.getElementById('singerGreeting');
@@ -616,11 +621,13 @@ function init() {
     // 1. Update Greeting on Load
     function updateSingerGreeting() {
         const currentSinger = localStorage.getItem('pitchWizSinger');
-        if (currentSinger) {
-            if (singerNameDisplay) singerNameDisplay.textContent = currentSinger;
-            if (singerGreeting) singerGreeting.style.display = 'block';
-        } else {
-            if (singerGreeting) singerGreeting.style.display = 'none';
+        if (singerGreeting) {
+            singerGreeting.style.display = 'block'; // Always show
+            if (currentSinger) {
+                if (singerNameDisplay) singerNameDisplay.textContent = currentSinger;
+            } else {
+                if (singerNameDisplay) singerNameDisplay.textContent = 'Guest';
+            }
         }
     }
 
@@ -739,11 +746,13 @@ function init() {
     // populateProfileSelector(); // Moved to dbManager.init() callback
 
     // Zoom level slider
-    zoomLevelInput.addEventListener('input', (e) => {
-        const zoom = parseInt(e.target.value) / 100;
-        visualizer.setZoomLevel(zoom);
-        zoomValue.textContent = `${zoom.toFixed(1)}x`;
-    });
+    if (zoomLevelInput) {
+        zoomLevelInput.addEventListener('input', (e) => {
+            const zoom = parseInt(e.target.value) / 100;
+            visualizer.setZoomLevel(zoom);
+            if (zoomValue) zoomValue.textContent = `${zoom.toFixed(1)}x`;
+        });
+    }
 
     // Scan speed slider
     scanSpeedInput.addEventListener('input', (e) => {
