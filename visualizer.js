@@ -279,7 +279,7 @@ class Visualizer {
 
         this.autoZoomSilenceTimer = 0;
 
-        // ROBUST RANGE CALCULATION (Glitch Filtering)
+        // ROBUST RANGE CALCULATION (Median Absolute Deviation - MAD)
         // 1. Calculate MIDI note values for all valid pitches
         const pitchValues = [];
         for (const p of recentPitches) {
@@ -287,20 +287,46 @@ class Visualizer {
             pitchValues.push(val);
         }
 
-        // 2. Sort values to find percentiles
+        // 2. Sort values to find Median
         pitchValues.sort((a, b) => a - b);
+        const count = pitchValues.length;
+        const middle = Math.floor(count / 2);
+        const median = count % 2 === 0
+            ? (pitchValues[middle - 1] + pitchValues[middle]) / 2
+            : pitchValues[middle];
 
-        // 3. Ignore outliers (bottom 5% and top 5%)
-        // This filters out momentary glitches/spikes
-        const lowIndex = Math.floor(pitchValues.length * 0.05);
-        const highIndex = Math.floor(pitchValues.length * 0.95);
+        // 3. Calculate MAD (Median Absolute Deviation)
+        // This is much more robust than Standard Deviation for rejecting outliers
+        const deviations = pitchValues.map(v => Math.abs(v - median));
+        deviations.sort((a, b) => a - b);
+        const madMiddle = Math.floor(deviations.length / 2);
+        const mad = deviations.length % 2 === 0
+            ? (deviations[madMiddle - 1] + deviations[madMiddle]) / 2
+            : deviations[madMiddle];
 
-        // Safety clamp
-        const safeLowIndex = Math.max(0, lowIndex);
-        const safeHighIndex = Math.min(pitchValues.length - 1, highIndex);
+        // 4. Define Threshold (e.g., 3.5 * MAD)
+        // For a perfectly steady note, MAD is near 0. We need a minimum clamp (e.g. 1 semitone) 
+        // to allow for natural vibrato, otherwise it filters too aggressively.
+        const robustMad = Math.max(1.0, mad);
+        const threshold = 3.5 * robustMad;
 
-        const activeMin = pitchValues[safeLowIndex];
-        const activeMax = pitchValues[safeHighIndex];
+        // 5. Filter Filtering
+        const validNotes = pitchValues.filter(v => Math.abs(v - median) <= threshold);
+
+        // Fallback: If almost everything was filtered (unlikely), use the raw percentile core
+        let activeMin, activeMax;
+
+        if (validNotes.length > count * 0.2) {
+            // Use filtered range
+            // We still trim the very edges (min/max) of the VALID notes just to be safe
+            validNotes.sort((a, b) => a - b);
+            activeMin = validNotes[0];
+            activeMax = validNotes[validNotes.length - 1];
+        } else {
+            // Fallback to percentile method if MAD failed (e.g. dual tones)
+            activeMin = pitchValues[Math.floor(count * 0.1)];
+            activeMax = pitchValues[Math.floor(count * 0.9)];
+        }
 
         const currentPitchRange = activeMax - activeMin;
         const currentCenter = (activeMin + activeMax) / 2;
