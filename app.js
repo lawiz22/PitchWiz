@@ -686,7 +686,7 @@ function init() {
 
             // Vertical drag = vertical pan (move up/down to see different notes)
             const currentPan = visualizer.verticalPan || 0;
-            const panChange = -deltaY * 0.05; // Negate: drag down = see lower notes
+            const panChange = deltaY * 0.05; // Positive deltaY
             visualizer.verticalPan = currentPan + panChange;
         }
     }, { passive: false });
