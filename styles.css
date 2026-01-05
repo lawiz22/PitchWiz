@@ -104,30 +104,67 @@ body {
     margin-bottom: var(--spacing-sm);
 }
 
-/* Navigation Container with Actions */
-.nav-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--spacing-sm);
+/* Action Bar */
+.action-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-xs);
     margin-bottom: var(--spacing-md);
 }
 
-.nav-actions {
-    display: flex;
-    gap: var(--spacing-xs);
-    align-items: center;
-}
-
-/* Floating Controls (Profile/Settings) */
-.floating-controls {
-    position: fixed;
-    bottom: var(--spacing-lg);
-    right: var(--spacing-md);
+.action-btn {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
-    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    color: var(--color-text-secondary);
+    min-height: 60px;
+}
+
+.action-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.action-btn span {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.action-btn.compact {
+    min-height: 60px;
+}
+
+.action-btn.compact svg {
+    width: 18px;
+    height: 18px;
+}
+
+.action-btn.compact span {
+    font-size: 0.7rem;
+}
+
+.action-btn:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-accent-primary);
+    color: var(--color-accent-primary);
+}
+
+.action-btn.record-btn {
+    color: #ef4444;
+}
+
+.action-btn.record-btn.recording {
+    animation: pulse 1.5s ease-in-out infinite;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
 }
 
 .logo {
