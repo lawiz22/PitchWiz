@@ -31,6 +31,7 @@ class Visualizer {
         this.scanSpeed = 1.0; // 0.5 to 2.0
         this.scrollOffset = 0; // For smooth scrolling
         this.showSpectrogramNotes = true; // Show note labels on spectrogram
+        this.showRightLabels = false; // Show note labels on right side of pitch diagram
         this.waveformZoom = 1.0; // Tuner waveform zoom: 0.5 to 3.0
         this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
 
@@ -534,7 +535,16 @@ class Visualizer {
             // Draw note label for ALL notes with their color
             const noteColor = this.getNoteColor(noteName);
             this.ctx.fillStyle = noteColor;
+
+            // Left Label
+            this.ctx.textAlign = 'right';
             this.ctx.fillText(`${noteName}${octave}`, 45, y);
+
+            // Right Label (Optional)
+            if (this.showRightLabels) {
+                this.ctx.textAlign = 'left';
+                this.ctx.fillText(`${noteName}${octave}`, width - 45, y);
+            }
         }
     }
 
