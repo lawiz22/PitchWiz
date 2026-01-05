@@ -1350,16 +1350,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update header profile name
 function updateHeaderProfileName() {
     const headerName = document.getElementById('headerProfileName');
-    console.log('updateHeaderProfileName called, element:', headerName);
     if (headerName) {
         const singer = localStorage.getItem('pitchWizSinger') || currentSinger || 'Guest';
-        console.log('Setting header name to:', singer);
         headerName.textContent = singer;
-        // Force visibility in case CSS is cached
         headerName.style.display = 'inline';
-    } else {
-        console.error('headerProfileName element not found!');
     }
+    // Element removed from header - profile now in settings page
 }
 
 // Open Profile Modal
