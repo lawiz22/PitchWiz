@@ -217,6 +217,98 @@ class Visualizer {
         this.animationId = requestAnimationFrame(() => this.animate());
     }
 
+
+    /**
+     * Update Auto-Zoom logic
+     */
+    updateAutoZoom() {
+        if (!this.autoZoom) return;
+
+        // 1. Analyze Active Range (Last ~3 seconds = 180 frames at 60fps)
+        const lookbackFrames = 180;
+        const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.note !== null && p.note > 0);
+
+        if (recentPitches.length < 10) {
+            // Not enough data or silence
+            this.autoZoomSilenceTimer++;
+            if (this.autoZoomSilenceTimer > 180) { // 3 seconds of silence
+                // Gently reset or hold valid view
+                // For now, hold last valid view
+            }
+            return;
+        }
+
+        this.autoZoomSilenceTimer = 0;
+
+        let activeMin = 1000;
+        let activeMax = 0;
+        let activeSum = 0;
+
+        // Calculate range and check for stability
+        for (const p of recentPitches) {
+            const pitchVal = p.note;
+            if (pitchVal < activeMin) activeMin = pitchVal;
+            if (pitchVal > activeMax) activeMax = pitchVal;
+            activeSum += pitchVal;
+        }
+
+        const currentPitchRange = activeMax - activeMin;
+        const currentCenter = (activeMin + activeMax) / 2;
+
+        // 2. Determine Targets
+        let targetNoteRange;
+
+        // "Focus Mode": If range is very small (steady note), zoom in tight
+        if (currentPitchRange < 3) {
+            targetNoteRange = 12; // 1 octave view for steady notes
+        } else {
+            // "Melody Mode": Fit range with padding
+            targetNoteRange = currentPitchRange + 12; // Range + 1 octave padding
+        }
+
+        // Clamp ranges
+        targetNoteRange = Math.max(12, Math.min(48, targetNoteRange)); // Min 1 octave, Max 4 octaves
+
+        // Calculate Target Zoom: ZoomLevel = DefaultNoteRange (48) / TargetNoteRange
+        // Example: If target range is 12 (1 octave), Zoom = 48/12 = 4.0x
+        // We use this.noteRange which is 48 by default (C1-C5)
+        const baseNoteRange = this.maxNote - this.minNote;
+        let targetZoom = baseNoteRange / targetNoteRange;
+
+        // Clamp Zoom to valid limits (0.5x to 3.0x)
+        targetZoom = Math.max(0.5, Math.min(3.0, targetZoom));
+
+        // Calculate Target Pan (Center Offset)
+        // Default center is (min+max)/2. We want new center to be 'currentCenter'.
+        // verticalPan shifts the center. 
+        // Logic: displayedCenter = defaultCenter + verticalPan
+        // So: verticalPan = displayedCenter - defaultCenter
+        // CORRECTION based on previous debugging:
+        // noteToY uses: centerNote = (min + max) / 2 + verticalPan
+        // So: centerNote (target) = defaultCenter + verticalPan
+        // verticalPan = targetCenter - defaultCenter
+        const defaultCenter = (this.minNote + this.maxNote) / 2;
+        let targetPan = currentCenter - defaultCenter;
+
+        // Clamp Pan to valid limits
+        targetPan = Math.max(-24, Math.min(24, targetPan));
+
+        // 3. Smooth Interpolation (Lerp)
+        const smoothFactor = 0.05; // 5% approach per frame
+
+        // Apply smooth zoom
+        const zoomDiff = targetZoom - this.zoomLevel;
+        if (Math.abs(zoomDiff) > 0.01) {
+            this.setZoomLevel(this.zoomLevel + zoomDiff * smoothFactor);
+        }
+
+        // Apply smooth pan
+        const panDiff = targetPan - this.verticalPan;
+        if (Math.abs(panDiff) > 0.1) {
+            this.verticalPan += panDiff * smoothFactor;
+        }
+    }
+
     /**
      * Draw pitch diagram visualization
      */
