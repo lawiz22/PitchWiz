@@ -403,10 +403,14 @@ function init() {
         updateTuningReferenceDisplay(freq);
     });
 
-    smoothingInput.addEventListener('input', (e) => {
-        const smoothing = parseInt(e.target.value);
-        pitchDetector.setSmoothingFactor(smoothing);
-    });
+
+    if (smoothingInput) {
+        smoothingInput.addEventListener('input', (e) => {
+            const smoothing = parseInt(e.target.value);
+            pitchDetector.setSmoothingFactor(smoothing);
+        });
+    }
+
 
     // Tuning threshold slider
     tuningThresholdInput.addEventListener('input', (e) => {
