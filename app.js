@@ -686,9 +686,8 @@ function init() {
 
             // Vertical drag = vertical pan (move up/down to see different notes)
             const currentPan = visualizer.verticalPan || 0;
-            const panChange = -deltaY * 0.2; // INCREASED sensitivity, NEGATIVE deltaY
+            const panChange = deltaY * 0.2; // POSITIVE deltaY, high sensitivity
             visualizer.verticalPan = currentPan + panChange;
-            console.log('Pan:', currentPan, '→', currentPan + panChange, 'deltaY:', deltaY);
         }
     }, { passive: false });
 
