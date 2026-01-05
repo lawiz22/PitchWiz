@@ -551,40 +551,68 @@ setTimeout(() => {
             canvas.style.cursor = 'grab';
         });
 
-        // --- Touch Events (Mobile Support) ---
+        // --- Touch Events (Mobile Support with Pinch-Zoom) ---
+        let initialPinchDistance = 0;
+        let initialPinchZoom = 1.0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+
+        function getPinchDistance(touch1, touch2) {
+            const dx = touch2.clientX - touch1.clientX;
+            const dy = touch2.clientY - touch1.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
-                e.preventDefault(); // Prevent scrolling
-                isDragging = true;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                if (intervalState.visualizer) {
-                    startVZoom = intervalState.visualizer.zoomLevel || 1.0;
-                    startHZoom = intervalState.visualizer.horizontalZoom || 1.0;
-                }
+                // Single finger - prepare for pan
+                e.preventDefault();
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                // Two fingers - pinch zoom
+                e.preventDefault();
+                initialPinchDistance = getPinchDistance(e.touches[0], e.touches[1]);
+                initialPinchZoom = intervalState.visualizer?.zoomLevel || 1.0;
             }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
-            if (!isDragging || !intervalState.visualizer || e.touches.length !== 1) return;
-            e.preventDefault(); // Prevent scrolling
+            if (!intervalState.visualizer) return;
+            e.preventDefault();
 
-            const deltaX = e.touches[0].clientX - startX;
-            const deltaY = e.touches[0].clientY - startY;
+            if (e.touches.length === 2) {
+                // Two-finger pinch zoom
+                const currentDistance = getPinchDistance(e.touches[0], e.touches[1]);
+                const scale = currentDistance / initialPinchDistance;
+                const newZoom = Math.max(0.5, Math.min(3.0, initialPinchZoom * scale));
 
-            // Horizontal = H-Zoom
-            const hZoomDelta = deltaX * 0.003;
-            const newHZoom = Math.max(0.5, Math.min(3.0, startHZoom + hZoomDelta));
-            intervalState.visualizer.horizontalZoom = newHZoom;
+                intervalState.visualizer.setZoom(newZoom);
+            } else if (e.touches.length === 1) {
+                // Single-finger pan (for future implementation)
+                const deltaX = e.touches[0].clientX - lastTouchX;
+                const deltaY = e.touches[0].clientY - lastTouchY;
 
-            // Vertical = V-Zoom
-            const vZoomDelta = -deltaY * 0.005;
-            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomDelta));
-            intervalState.visualizer.setZoom(newVZoom);
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+
+                // Pan functionality can be added here if needed
+            }
         }, { passive: false });
 
-        canvas.addEventListener('touchend', () => {
-            isDragging = false;
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                // All fingers lifted
+                initialPinchDistance = 0;
+            } else if (e.touches.length === 1) {
+                // One finger remaining, update tracking
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }
+        });
+
+        canvas.addEventListener('touchcancel', () => {
+            initialPinchDistance = 0;
         });
 
         canvas.style.cursor = 'grab';

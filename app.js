@@ -628,48 +628,74 @@ function init() {
         canvas.style.cursor = 'grab';
     });
 
-    // --- Touch Events (Mobile Support) ---
+
+    // --- Touch Events (Mobile Support with Pinch-Zoom) ---
+    let initialPinchDistance = 0;
+    let initialPinchZoom = 1.0;
+    let touchStartTime = 0;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    function getPinchDistance(touch1, touch2) {
+        const dx = touch2.clientX - touch1.clientX;
+        const dy = touch2.clientY - touch1.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
     canvas.addEventListener('touchstart', (e) => {
+        touchStartTime = Date.now();
+
         if (e.touches.length === 1) {
+            // Single finger - prepare for pan
             e.preventDefault();
-            isDragging = true;
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            startVZoom = visualizer.zoomLevel;
-            startHZoom = visualizer.horizontalZoom;
-            startWaveformZoom = visualizer.waveformZoom || 1.0;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            // Two fingers - pinch zoom
+            e.preventDefault();
+            initialPinchDistance = getPinchDistance(e.touches[0], e.touches[1]);
+            initialPinchZoom = visualizer.zoomLevel || 1.0;
         }
     }, { passive: false });
 
     canvas.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
         e.preventDefault();
 
-        const deltaX = e.touches[0].clientX - startX;
-        const deltaY = e.touches[0].clientY - startY;
-        const currentMode = visualizer.mode;
+        if (e.touches.length === 2) {
+            // Two-finger pinch zoom
+            const currentDistance = getPinchDistance(e.touches[0], e.touches[1]);
+            const scale = currentDistance / initialPinchDistance;
+            const newZoom = Math.max(0.5, Math.min(3.0, initialPinchZoom * scale));
 
-        if (currentMode === 'tuner') {
-            const vZoomChange = -deltaY / 100;
-            const newWaveformZoom = Math.max(0.5, Math.min(3.0, startWaveformZoom + vZoomChange));
-            visualizer.waveformZoom = newWaveformZoom;
-        } else {
-            const vZoomChange = -deltaY / 100;
-            const hZoomChange = deltaX / 100;
+            visualizer.setZoomLevel(newZoom);
+            if (zoomValue) zoomValue.textContent = `${newZoom.toFixed(1)}x`;
+            if (zoomLevelInput) zoomLevelInput.value = Math.round(newZoom * 100);
+        } else if (e.touches.length === 1) {
+            // Single-finger pan (for future pan implementation)
+            const deltaX = e.touches[0].clientX - lastTouchX;
+            const deltaY = e.touches[0].clientY - lastTouchY;
 
-            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomChange));
-            const newHZoom = Math.max(0.01, Math.min(3.0, startHZoom + hZoomChange));
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
 
-            visualizer.setZoomLevel(newVZoom);
-            zoomValue.textContent = `${newVZoom.toFixed(1)}x`;
-            zoomLevelInput.value = Math.round(newVZoom * 100);
-
-            visualizer.setHorizontalZoom(newHZoom);
+            // For now, just update position tracking
+            // Pan functionality can be added here if needed
         }
     }, { passive: false });
 
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            // All fingers lifted
+            initialPinchDistance = 0;
+        } else if (e.touches.length === 1) {
+            // One finger remaining, update tracking
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }
+    });
+
+    canvas.addEventListener('touchcancel', () => {
+        initialPinchDistance = 0;
     });
 
     // Recording functionality
