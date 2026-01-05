@@ -383,7 +383,8 @@ class Visualizer {
 
             // Calculate scroll offset to make diagram scroll from right to left
             const totalWidth = this.pitchHistory.length * pointSpacing;
-            const scrollOffset = Math.max(0, totalWidth - canvasWidth);
+            // Keep the "head" of the graph at 75% of the screen width to avoid edge clipping
+            const scrollOffset = Math.max(0, totalWidth - (canvasWidth * 0.75));
 
             for (let i = 1; i < this.pitchHistory.length; i++) {
                 const prevPoint = this.pitchHistory[i - 1];
