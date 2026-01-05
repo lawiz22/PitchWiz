@@ -226,7 +226,7 @@ class Visualizer {
 
         // 1. Analyze Active Range (Last ~3 seconds = 180 frames at 60fps)
         const lookbackFrames = 180;
-        const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.note !== null && p.note > 0);
+        const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.frequency && p.frequency > 0);
 
         if (recentPitches.length < 10) {
             // Not enough data or silence
@@ -246,7 +246,12 @@ class Visualizer {
 
         // Calculate range and check for stability
         for (const p of recentPitches) {
-            const pitchVal = p.note;
+            // FIX: p.note is a string (e.g. "C4"). We need the numeric MIDI value.
+            // Calculate from frequency: note = 12 * log2(freq/440) + 69
+            if (!p.frequency) continue;
+
+            const pitchVal = 12 * Math.log2(p.frequency / 440) + 69;
+
             if (pitchVal < activeMin) activeMin = pitchVal;
             if (pitchVal > activeMax) activeMax = pitchVal;
             activeSum += pitchVal;
