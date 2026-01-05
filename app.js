@@ -671,15 +671,18 @@ function init() {
             if (zoomValue) zoomValue.textContent = `${newZoom.toFixed(1)}x`;
             if (zoomLevelInput) zoomLevelInput.value = Math.round(newZoom * 100);
         } else if (e.touches.length === 1) {
-            // Single-finger pan (for future pan implementation)
+            // Single-finger pan - adjust horizontal zoom for panning effect
             const deltaX = e.touches[0].clientX - lastTouchX;
             const deltaY = e.touches[0].clientY - lastTouchY;
 
             lastTouchX = e.touches[0].clientX;
             lastTouchY = e.touches[0].clientY;
 
-            // For now, just update position tracking
-            // Pan functionality can be added here if needed
+            // Horizontal pan via horizontal zoom adjustment
+            const currentHZoom = visualizer.horizontalZoom || 1.0;
+            const hZoomChange = deltaX * 0.003; // Sensitivity factor
+            const newHZoom = Math.max(0.1, Math.min(5.0, currentHZoom + hZoomChange));
+            visualizer.setHorizontalZoom(newHZoom);
         }
     }, { passive: false });
 
