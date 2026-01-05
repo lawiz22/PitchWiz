@@ -415,343 +415,376 @@
             </div>
         </div>
 
-        <!-- Settings Modal -->
-        <div class="modal" id="settingsModal">
-            <div class="modal-content">
+
+        <!-- Settings View (Full Page) -->
+        <div id="settingsView" class="view-container" style="display: none;">
+            <div class="settings-page">
+                <h2 class="settings-title">Settings</h2>
+
+                <!-- Audio & Detection Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">Audio & Detection</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="a4Frequency">A4 Reference Frequency</label>
+                            <input type="number" id="a4Frequency" value="440" min="430" max="450" step="1">
+                            <span class="setting-hint">Standard tuning: 440 Hz</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="detectionModeSelect">Detection Mode</label>
+                            <select id="detectionModeSelect">
+                                <option value="on-sound">On Sound</option>
+                                <option value="live">Live Mode</option>
+                            </select>
+                            <span class="setting-hint">On Sound: only when pitch detected | Live: continuous</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="smoothing">Smoothing: <span id="smoothingValue">70</span></label>
+                            <input type="range" id="smoothing" min="0" max="100" value="70">
+                            <span class="setting-hint">Reduces noise. Higher values = smoother for vocals</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tuning & Display Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">Tuning & Display</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="tuningTolerance">Tuning Tolerance: <span
+                                    id="tuningToleranceValue">5¢</span></label>
+                            <input type="range" id="tuningTolerance" min="3" max="15" value="5" step="1">
+                            <span class="setting-hint">How close to be "in tune" (green indicator)</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Pitch Range</label>
+                            <div class="range-selectors">
+                                <select id="minNoteSelect"></select>
+                                <span>to</span>
+                                <select id="maxNoteSelect"></select>
+                            </div>
+                            <span class="setting-hint">Visible note range for pitch diagram</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="zoomLevel">Vertical Zoom: <span id="zoomValue">1.0x</span></label>
+                            <input type="range" id="zoomLevel" min="50" max="300" value="100" step="10">
+                            <span class="setting-hint">Zoom in/out on the pitch range</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">Visualization</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="viewModeSelect">View Mode</label>
+                            <select id="viewModeSelect">
+                                <option value="pitch-diagram">Pitch Diagram</option>
+                                <option value="spectrogram">Spectrogram</option>
+                                <option value="tuner">Tuner</option>
+                            </select>
+                            <span class="setting-hint">Current visualization mode</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="scanSpeed">Scan Speed: <span id="scanSpeedValue">1.0x</span></label>
+                            <input type="range" id="scanSpeed" min="50" max="200" value="100" step="10">
+                            <span class="setting-hint">How fast the diagram scrolls (pitch diagram only)</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="showSpectrogramNotes" checked>
+                                Show note labels on spectrogram
+                            </label>
+                            <span class="setting-hint">Display musical notes on the right side</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="waveformGain">Waveform Gain: <span id="waveformGainValue">2.0x</span></label>
+                            <input type="range" id="waveformGain" min="50" max="1000" value="200" step="10">
+                            <span class="setting-hint">Waveform amplitude in tuner mode</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">Singer Profile</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="profileSelect">Current Profile</label>
+                            <select id="profileSelect">
+                                <option value="guest">Guest</option>
+                            </select>
+                            <span class="setting-hint">Select or create a singer profile</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="profileName">Profile Name</label>
+                            <input type="text" id="profileName" placeholder="Enter profile name">
+                            <button class="btn-secondary" id="saveProfileBtn">Save Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Tuning Reference Modal -->
+        <div class="modal" id="tuningRefModal">
+            <div class="modal-content compact">
                 <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button class="close-btn" id="closeSettings">&times;</button>
+                    <h3>Tuning Reference</h3>
+                    <button class="close-btn" id="closeTuningRef">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="setting-group">
-                        <label for="a4Frequency">A4 Reference Frequency</label>
-                        <input type="number" id="a4Frequency" value="440" min="430" max="450" step="1">
-                        <span class="setting-hint">Standard: 440 Hz</span>
+                        <label for="tuningRefInput">A4 Frequency (Hz)</label>
+                        <input type="number" id="tuningRefInput" min="400" max="480" step="0.1" value="440">
+                        <span class="setting-hint">Standard: 440 Hz | Baroque: 415 Hz</span>
                     </div>
-                    <div class="setting-group">
-                        <label for="smoothing">Smoothing</label>
-                        <input type="range" id="smoothing" min="0" max="100" value="70">
-                        <span class="setting-hint">Reduce noise in detection</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="tuningThreshold">Tuning Threshold</label>
-                        <input type="range" id="tuningThreshold" min="1" max="20" value="5">
-                        <span class="setting-hint">±<span id="tuningThresholdValue">5</span> cents to be "in
-                            tune"</span>
-                    </div>
-                    <div class="setting-group">
-                        <label>Pitch Range</label>
-                        <div class="range-selectors">
-                            <select id="minNoteSelect"></select>
-                            <span>to</span>
-                            <select id="maxNoteSelect"></select>
-                        </div>
-                        <span class="setting-hint">Display range for pitch diagram</span>
-                    </div>
-                    <div class="setting-group">
-                        <label>Detection Mode</label>
-                        <div class="mode-switch">
-                            <button class="mode-switch-btn active" data-detection-mode="on-sound">On Sound</button>
-                            <button class="mode-switch-btn" data-detection-mode="live">Live Mode</button>
-                        </div>
-                        <span class="setting-hint">On Sound: only when pitch detected | Live: continuous</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="zoomLevel">Vertical Zoom: <span id="zoomValue">1.0x</span></label>
-                        <input type="range" id="zoomLevel" min="50" max="300" value="100" step="10">
-                        <span class="setting-hint">Zoom in/out on the pitch range</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="scanSpeed">Scan Speed: <span id="scanSpeedValue">1.0x</span></label>
-                        <input type="range" id="scanSpeed" min="50" max="200" value="100" step="10">
-                        <span class="setting-hint">How fast the diagram scrolls</span>
-                    </div>
-                    <div class="setting-group">
-                        <label>
-                            <input type="checkbox" id="showSpectrogramNotes" checked>
-                            Show note labels on spectrogram
-                        </label>
-                        <span class="setting-hint">Display musical notes on the right side</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="waveformGain">Waveform Gain: <span id="waveformGainValue">2.0x</span></label>
-                        <input type="range" id="waveformGain" min="50" max="1000" value="200" step="10">
-                        <span class="setting-hint">Adjust waveform amplitude in tuner mode</span>
-                    </div>
-                    <div class="setting-group">
-                        <label>
-                            <input type="checkbox" id="voiceMode">
-                            Voice Mode (Smoother Tuning)
-                        </label>
-                        <span class="setting-hint">Adds averaging for vocal pitch - easier to stay in tune</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="tuningTolerance">Tuning Tolerance: <span id="tuningToleranceValue">5¢</span></label>
-                        <input type="range" id="tuningTolerance" min="3" max="15" value="5" step="1">
-                        <span class="setting-hint">How close to be "in tune" (green indicator)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tuning Reference Modal -->
-    <div class="modal" id="tuningRefModal">
-        <div class="modal-content compact">
-            <div class="modal-header">
-                <h3>Tuning Reference</h3>
-                <button class="close-btn" id="closeTuningRef">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="setting-group">
-                    <label for="tuningRefInput">A4 Frequency (Hz)</label>
-                    <input type="number" id="tuningRefInput" min="400" max="480" step="0.1" value="440">
-                    <span class="setting-hint">Standard: 440 Hz | Baroque: 415 Hz</span>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-secondary" id="tuningRefCancel">Cancel</button>
-                <button class="btn-primary" id="tuningRefSave">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Save Recording Modal -->
-    <div id="saveModal" class="modal">
-        <div class="modal-content small">
-            <div class="modal-header">
-                <h2>Save Recording</h2>
-                <button class="icon-btn close-modal" id="closeSaveModal">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Recording Name</label>
-                    <input type="text" id="recordingNameInput" placeholder="Recording #001">
-                </div>
-                <div class="form-group">
-                    <label>Singer / Musician</label>
-                    <input type="text" id="singerNameInput" placeholder="Enter name">
                 </div>
                 <div class="modal-actions">
-                    <button class="btn secondary" id="discardBtn">Discard</button>
-                    <button class="btn primary" id="saveRecordingBtn">Save Recording</button>
+                    <button class="btn-secondary" id="tuningRefCancel">Cancel</button>
+                    <button class="btn-primary" id="tuningRefSave">Save</button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Profile Modal -->
-    <div id="profileModal" class="modal">
-        <div class="modal-content compact">
-            <div class="modal-header">
-                <h2>Singer Profile</h2>
-                <button class="icon-btn close-modal" id="closeProfileModal">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="profile-compact">
-                    <div class="profile-row">
-                        <strong id="currentProfileName">Loading...</strong>
-                        <span class="status-badge" id="profileCalibrationStatus">Not Calibrated</span>
-                    </div>
-                    <button class="btn primary compact" id="openCalibrationBtn">
-                        📊 Calibrate Range
+        <!-- Save Recording Modal -->
+        <div id="saveModal" class="modal">
+            <div class="modal-content small">
+                <div class="modal-header">
+                    <h2>Save Recording</h2>
+                    <button class="icon-btn close-modal" id="closeSaveModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </div>
-
-                <div class="singer-list-section">
-                    <label>Switch Profile</label>
-                    <select id="singerListSelect" class="singer-select">
-                        <option value="">-- Select a singer --</option>
-                    </select>
-                    <div class="or-divider">or</div>
-                    <input type="text" id="profileSingerInput" placeholder="Create new profile">
-                    <button class="btn secondary compact" id="createProfileBtn">Create New</button>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Recording Name</label>
+                        <input type="text" id="recordingNameInput" placeholder="Recording #001">
+                    </div>
+                    <div class="form-group">
+                        <label>Singer / Musician</label>
+                        <input type="text" id="singerNameInput" placeholder="Enter name">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn secondary" id="discardBtn">Discard</button>
+                        <button class="btn primary" id="saveRecordingBtn">Save Recording</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Export/Import Progress Modal -->
-    <div id="exportImportModal" class="modal">
-        <div class="modal-content compact">
-            <div class="modal-header">
-                <h2 id="exportImportTitle">Processing...</h2>
-            </div>
-            <div class="modal-body">
-                <div class="progress-container">
-                    <div class="progress-bar" id="exportImportProgress"></div>
+        <!-- Profile Modal -->
+        <div id="profileModal" class="modal">
+            <div class="modal-content compact">
+                <div class="modal-header">
+                    <h2>Singer Profile</h2>
+                    <button class="icon-btn close-modal" id="closeProfileModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
-                <p id="exportImportStatus">Preparing...</p>
-                <div class="modal-actions" style="margin-top: 15px; justify-content: center;">
-                    <button class="btn primary" id="btnCloseExportImport" style="display: none;"
-                        onclick="document.getElementById('exportImportModal').style.display='none'">Close</button>
+                <div class="modal-body">
+                    <div class="profile-compact">
+                        <div class="profile-row">
+                            <strong id="currentProfileName">Loading...</strong>
+                            <span class="status-badge" id="profileCalibrationStatus">Not Calibrated</span>
+                        </div>
+                        <button class="btn primary compact" id="openCalibrationBtn">
+                            📊 Calibrate Range
+                        </button>
+                    </div>
+
+                    <div class="singer-list-section">
+                        <label>Switch Profile</label>
+                        <select id="singerListSelect" class="singer-select">
+                            <option value="">-- Select a singer --</option>
+                        </select>
+                        <div class="or-divider">or</div>
+                        <input type="text" id="profileSingerInput" placeholder="Create new profile">
+                        <button class="btn secondary compact" id="createProfileBtn">Create New</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Interval Configuration Modal -->
-    <div id="intervalConfigModal" class="modal">
-        <div class="modal-content compact">
-            <div class="modal-header">
-                <h2>Interval Practice Setup</h2>
-                <button class="icon-btn close-modal" onclick="closeIntervalConfig()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+        <!-- Export/Import Progress Modal -->
+        <div id="exportImportModal" class="modal">
+            <div class="modal-content compact">
+                <div class="modal-header">
+                    <h2 id="exportImportTitle">Processing...</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="progress-container">
+                        <div class="progress-bar" id="exportImportProgress"></div>
+                    </div>
+                    <p id="exportImportStatus">Preparing...</p>
+                    <div class="modal-actions" style="margin-top: 15px; justify-content: center;">
+                        <button class="btn primary" id="btnCloseExportImport" style="display: none;"
+                            onclick="document.getElementById('exportImportModal').style.display='none'">Close</button>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Difficulty Level</label>
-                    <div class="level-cards">
-                        <div class="level-card" onclick="selectLevel('beginner')" id="lvl_beginner">
-                            <div class="lvl-icon">🟢</div>
-                            <div class="lvl-info">
-                                <strong>Easy</strong>
-                                <span>Fundamental (Oct, M2, M3, P5)</span>
+        </div>
+
+        <!-- Interval Configuration Modal -->
+        <div id="intervalConfigModal" class="modal">
+            <div class="modal-content compact">
+                <div class="modal-header">
+                    <h2>Interval Practice Setup</h2>
+                    <button class="icon-btn close-modal" onclick="closeIntervalConfig()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Difficulty Level</label>
+                        <div class="level-cards">
+                            <div class="level-card" onclick="selectLevel('beginner')" id="lvl_beginner">
+                                <div class="lvl-icon">🟢</div>
+                                <div class="lvl-info">
+                                    <strong>Easy</strong>
+                                    <span>Fundamental (Oct, M2, M3, P5)</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="level-card" onclick="selectLevel('intermediate')" id="lvl_intermediate">
-                            <div class="lvl-icon">🟡</div>
-                            <div class="lvl-info">
-                                <strong>Intermediate</strong>
-                                <span>Basic (+ m2, m3, P4, M6)</span>
+                            <div class="level-card" onclick="selectLevel('intermediate')" id="lvl_intermediate">
+                                <div class="lvl-icon">🟡</div>
+                                <div class="lvl-info">
+                                    <strong>Intermediate</strong>
+                                    <span>Basic (+ m2, m3, P4, M6)</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="level-card" onclick="selectLevel('advanced')" id="lvl_advanced">
-                            <div class="lvl-icon">🟠</div>
-                            <div class="lvl-info">
-                                <strong>Advanced</strong>
-                                <span>Tension (+ TT, m6, 7ths)</span>
+                            <div class="level-card" onclick="selectLevel('advanced')" id="lvl_advanced">
+                                <div class="lvl-icon">🟠</div>
+                                <div class="lvl-info">
+                                    <strong>Advanced</strong>
+                                    <span>Tension (+ TT, m6, 7ths)</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="level-card" onclick="selectLevel('expert')" id="lvl_expert">
-                            <div class="lvl-icon">🔴</div>
-                            <div class="lvl-info">
-                                <strong>Expert</strong>
-                                <span>Extensions (+ 9th, 11th, 13th)</span>
+                            <div class="level-card" onclick="selectLevel('expert')" id="lvl_expert">
+                                <div class="lvl-icon">🔴</div>
+                                <div class="lvl-info">
+                                    <strong>Expert</strong>
+                                    <span>Extensions (+ 9th, 11th, 13th)</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Direction</label>
-                    <div class="direction-toggle">
-                        <button class="toggle-btn active" onclick="selectDirection('asc')" id="dir_asc">Ascending
-                            ↗️</button>
-                        <button class="toggle-btn" onclick="selectDirection('desc')" id="dir_desc">Descending
-                            ↘️</button>
-                        <button class="toggle-btn" onclick="selectDirection('random')" id="dir_random">Random
-                            🔀</button>
+                    <div class="form-group">
+                        <label>Direction</label>
+                        <div class="direction-toggle">
+                            <button class="toggle-btn active" onclick="selectDirection('asc')" id="dir_asc">Ascending
+                                ↗️</button>
+                            <button class="toggle-btn" onclick="selectDirection('desc')" id="dir_desc">Descending
+                                ↘️</button>
+                            <button class="toggle-btn" onclick="selectDirection('random')" id="dir_random">Random
+                                🔀</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="modal-actions centered">
-                    <button class="btn primary" onclick="startIntervalSession()">Start Practice</button>
+                    <div class="modal-actions centered">
+                        <button class="btn primary" onclick="startIntervalSession()">Start Practice</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Interval Active Practice View (Modal) -->
-    <div id="intervalPracticeModal" class="modal fullscreen">
-        <div class="modal-content fullscreen-content">
-            <div class="practice-header-bar">
-                <button class="icon-btn" onclick="closeIntervalPractice()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div class="practice-title">
-                    <span id="intervalLevelBadge">Intermediate</span>
-                    <span id="intervalNameDisplay">Waiting...</span>
+        <!-- Interval Active Practice View (Modal) -->
+        <div id="intervalPracticeModal" class="modal fullscreen">
+            <div class="modal-content fullscreen-content">
+                <div class="practice-header-bar">
+                    <button class="icon-btn" onclick="closeIntervalPractice()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div class="practice-title">
+                        <span id="intervalLevelBadge">Intermediate</span>
+                        <span id="intervalNameDisplay">Waiting...</span>
+                    </div>
+                    <div class="practice-score" id="intervalScoreDisplay">0%</div>
                 </div>
-                <div class="practice-score" id="intervalScoreDisplay">0%</div>
-            </div>
 
-            <div class="interval-visualizer">
                 <div class="interval-visualizer">
-                    <!-- Scrolling Pitch Diagram -->
-                    <canvas id="intervalCanvas" width="500" height="200"
-                        style="width: 100%; height: 200px; border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 20px;"></canvas>
+                    <div class="interval-visualizer">
+                        <!-- Scrolling Pitch Diagram -->
+                        <canvas id="intervalCanvas" width="500" height="200"
+                            style="width: 100%; height: 200px; border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 20px;"></canvas>
 
-                    <!-- Large Pucks for visual feedback -->
-                    <div class="interval-pucks">
-                        <div class="note-puck reference" id="refPuck">
-                            <span class="note-val">C3</span>
-                            <span class="note-label">Reference</span>
+                        <!-- Large Pucks for visual feedback -->
+                        <div class="interval-pucks">
+                            <div class="note-puck reference" id="refPuck">
+                                <span class="note-val">C3</span>
+                                <span class="note-label">Reference</span>
+                            </div>
+                            <div class="interval-arrow">➝</div>
+                            <div class="note-puck target" id="targetPuck">
+                                <span class="note-val">?</span>
+                                <span class="note-label">Target</span>
+                            </div>
                         </div>
-                        <div class="interval-arrow">➝</div>
-                        <div class="note-puck target" id="targetPuck">
-                            <span class="note-val">?</span>
-                            <span class="note-label">Target</span>
-                        </div>
+                        <div class="instruction-text" id="intervalInstruction">Listen to the reference note...</div>
                     </div>
-                    <div class="instruction-text" id="intervalInstruction">Listen to the reference note...</div>
-                </div>
 
-                <div class="practice-controls-bar">
-                    <button class="control-btn secondary" onclick="replayReference()">
-                        👂 Hear Reference
-                    </button>
-                    <button class="control-btn secondary" onclick="playTargetTone()"
-                        title="Cheat: Hear the target note">
-                        🎯 Target Tone
-                    </button>
-                    <button class="control-btn primary" id="btnRecordInterval" onclick="toggleIntervalRecording()">
-                        🔴 Sing
-                    </button>
-                    <button class="control-btn primary" id="btnSaveInterval" style="display: none;"
-                        onclick="triggerIntervalSave()">
-                        💾 Save
-                    </button>
-                    <button class="control-btn secondary" id="btnRetryInterval" style="display: none;"
-                        onclick="retryInterval()">
-                        🔄 Retry
-                    </button>
-                    <button class="control-btn secondary" onclick="nextInterval()">
-                        Next ➡️
-                    </button>
+                    <div class="practice-controls-bar">
+                        <button class="control-btn secondary" onclick="replayReference()">
+                            👂 Hear Reference
+                        </button>
+                        <button class="control-btn secondary" onclick="playTargetTone()"
+                            title="Cheat: Hear the target note">
+                            🎯 Target Tone
+                        </button>
+                        <button class="control-btn primary" id="btnRecordInterval" onclick="toggleIntervalRecording()">
+                            🔴 Sing
+                        </button>
+                        <button class="control-btn primary" id="btnSaveInterval" style="display: none;"
+                            onclick="triggerIntervalSave()">
+                            💾 Save
+                        </button>
+                        <button class="control-btn secondary" id="btnRetryInterval" style="display: none;"
+                            onclick="retryInterval()">
+                            🔄 Retry
+                        </button>
+                        <button class="control-btn secondary" onclick="nextInterval()">
+                            Next ➡️
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="db-manager.js"></script>
-        <script src="recording-manager.js"></script>
-        <script src="progress-tracker.js"></script>
-        <script src="tone-generator.js"></script>
-        <script src="pitch-detector.js"></script>
-        <script src="visualizer.js"></script>
-        <script src="app.js"></script>
-        <script src="practice-functions.js"></script>
-        <script src="interval-functions.js"></script>
-        <script src="practice-integration.js"></script>
-        <script src="export-import.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script src="db-manager.js"></script>
+            <script src="recording-manager.js"></script>
+            <script src="progress-tracker.js"></script>
+            <script src="tone-generator.js"></script>
+            <script src="pitch-detector.js"></script>
+            <script src="visualizer.js"></script>
+            <script src="app.js"></script>
+            <script src="practice-functions.js"></script>
+            <script src="interval-functions.js"></script>
+            <script src="practice-integration.js"></script>
+            <script src="export-import.js"></script>
 
-        <!-- Service Worker Registration -->
-        <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('service-worker.js')
-                        .then(reg => console.log('Service Worker registered'))
-                        .catch(err => console.log('Service Worker registration failed'));
-                });
-            }
-        </script>
+            <!-- Service Worker Registration -->
+            <script>
+                if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', () => {
+                        navigator.serviceWorker.register('service-worker.js')
+                            .then(reg => console.log('Service Worker registered'))
+                            .catch(err => console.log('Service Worker registration failed'));
+                    });
+                }
+            </script>
 </body>
 
 </html>

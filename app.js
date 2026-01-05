@@ -163,8 +163,27 @@ function init() {
 
     // Event listeners
     startBtn.addEventListener('click', toggleListening);
-    settingsBtn.addEventListener('click', openSettings);
-    closeSettings.addEventListener('click', closeSettingsModal);
+    // Settings button now handled by navigation tabs
+    settingsBtn.addEventListener('click', () => {
+        // Simulate clicking the settings nav tab
+        const settingsView = document.getElementById('settingsView');
+        const visualizationContainer = document.getElementById('visualizationContainer');
+        const libraryView = document.getElementById('libraryView');
+        const progressView = document.getElementById('progressView');
+        const practiceView = document.getElementById('practiceView');
+
+        // Hide all views
+        if (visualizationContainer) visualizationContainer.style.display = 'none';
+        if (libraryView) libraryView.style.display = 'none';
+        if (progressView) progressView.style.display = 'none';
+        if (practiceView) practiceView.style.display = 'none';
+
+        // Show settings
+        if (settingsView) settingsView.style.display = 'block';
+
+        // Update nav tabs
+        modeBtns.forEach(b => b.classList.remove('active'));
+    });
 
     // Mode toggle
     const waveformGainControl = document.getElementById('waveformGainControl');
@@ -179,11 +198,15 @@ function init() {
             const visualizationContainer = document.getElementById('visualizationContainer');
             const libraryView = document.getElementById('libraryView');
             const progressView = document.getElementById('progressView');
+            const settingsView = document.getElementById('settingsView');
+            const practiceView = document.getElementById('practiceView');
 
             // Hide all first
             if (visualizationContainer) visualizationContainer.style.display = 'none';
             if (libraryView) libraryView.style.display = 'none';
             if (progressView) progressView.style.display = 'none';
+            if (settingsView) settingsView.style.display = 'none';
+            if (practiceView) practiceView.style.display = 'none';
 
             if (mode === 'library') {
                 libraryView.style.display = 'flex';
