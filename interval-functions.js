@@ -119,10 +119,10 @@ function initIntervalVisualizer() {
         // Dynamic zoom based on interval size
         let zoom;
         if (intervalSize <= 2) zoom = 5.0;       // Minor 2nd, Major 2nd
-        else if (intervalSize <= 4) zoom = 3.5;  // Minor 3rd, Major 3rd, Perfect 4th
-        else if (intervalSize <= 7) zoom = 2.5;  // Tritone, Perfect 5th, Minor 6th, Major 6th
-        else if (intervalSize <= 11) zoom = 2.0; // Minor 7th, Major 7th
-        else zoom = 1.5;                          // Octave or larger
+        else if (intervalSize <= 3) zoom = 4.0;  // Minor 3rd
+        else if (intervalSize <= 7) zoom = 2.5;  // M3, P4, Tritone, P5, m6
+        else if (intervalSize <= 11) zoom = 2.0; // Major/Minor 6th/7th
+        else zoom = 1.6;                         // Octave or larger
 
         // Proportional padding based on interval size
         // Small intervals get small padding, large intervals get large padding
