@@ -684,11 +684,18 @@ function init() {
             const newHZoom = Math.max(0.1, Math.min(5.0, currentHZoom + hZoomChange));
             visualizer.setHorizontalZoom(newHZoom);
 
-            // Vertical drag = vertical pan (move up/down to see different notes)
+            // Vertical drag = vertical pan (move up/down to scroll)
+            // Calculate natural 1:1 tracking: move content exactly with finger
+            const visibleSemitones = visualizer.noteRange / visualizer.zoomLevel;
+            const canvasHeight = visualizer.canvas.clientHeight || visualizer.canvas.height; // Use displayed height
+            const semitonesPerPixel = visibleSemitones / canvasHeight;
+
             const currentPan = visualizer.verticalPan || 0;
-            const panChange = deltaY * 0.02; // Reduced sensitivity for smoother control
+            // Drag down (positive delta) -> shifts view to higher notes (center increases) -> content moves down
+            const panChange = deltaY * semitonesPerPixel;
+
             const newPan = currentPan + panChange;
-            // Limit pan to ±24 semitones (2 octaves) to prevent diagram disappearing
+            // Limit pan to ±24 semitones to keep diagram visible
             visualizer.verticalPan = Math.max(-24, Math.min(24, newPan));
         }
     }, { passive: false });

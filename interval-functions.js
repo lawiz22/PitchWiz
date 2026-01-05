@@ -603,10 +603,15 @@ setTimeout(() => {
                 intervalState.visualizer.horizontalZoom = newHZoom;
 
                 // Vertical drag = vertical pan
+                // Calculate natural 1:1 tracking
+                const visibleSemitones = (intervalState.visualizer.noteRange || 48) / (intervalState.visualizer.zoomLevel || 1.0);
+                const canvasHeight = intervalState.visualizer.canvas.clientHeight || intervalState.visualizer.canvas.height;
+                const semitonesPerPixel = visibleSemitones / canvasHeight;
+
                 const currentPan = intervalState.visualizer.verticalPan || 0;
-                const panChange = deltaY * 0.02;
+                const panChange = deltaY * semitonesPerPixel;
+
                 const newPan = currentPan + panChange;
-                // Limit pan to ±24 semitones
                 intervalState.visualizer.verticalPan = Math.max(-24, Math.min(24, newPan));
             }
         }, { passive: false });
