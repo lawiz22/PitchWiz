@@ -604,8 +604,10 @@ setTimeout(() => {
 
                 // Vertical drag = vertical pan
                 const currentPan = intervalState.visualizer.verticalPan || 0;
-                const panChange = deltaY * 0.05;
-                intervalState.visualizer.verticalPan = currentPan + panChange;
+                const panChange = deltaY * 0.02;
+                const newPan = currentPan + panChange;
+                // Limit pan to ±24 semitones
+                intervalState.visualizer.verticalPan = Math.max(-24, Math.min(24, newPan));
             }
         }, { passive: false });
 

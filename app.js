@@ -686,8 +686,10 @@ function init() {
 
             // Vertical drag = vertical pan (move up/down to see different notes)
             const currentPan = visualizer.verticalPan || 0;
-            const panChange = deltaY * 0.05; // Smooth sensitivity
-            visualizer.verticalPan = currentPan + panChange;
+            const panChange = deltaY * 0.02; // Reduced sensitivity for smoother control
+            const newPan = currentPan + panChange;
+            // Limit pan to ±24 semitones (2 octaves) to prevent diagram disappearing
+            visualizer.verticalPan = Math.max(-24, Math.min(24, newPan));
         }
     }, { passive: false });
 
