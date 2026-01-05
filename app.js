@@ -603,6 +603,89 @@ function init() {
         });
     });
 
+    // --- SINGER PROFILE UI ---
+    const singerGreeting = document.getElementById('singerGreeting');
+    const singerNameDisplay = document.getElementById('singerNameDisplay');
+    const profileSelect = document.getElementById('profileSelect');
+
+    // 1. Update Greeting on Load
+    function updateSingerGreeting() {
+        const currentSinger = localStorage.getItem('pitchWizSinger');
+        if (currentSinger) {
+            if (singerNameDisplay) singerNameDisplay.textContent = currentSinger;
+            if (singerGreeting) singerGreeting.style.display = 'block';
+        } else {
+            if (singerGreeting) singerGreeting.style.display = 'none';
+        }
+    }
+
+    // 2. Click Greeting to Open Settings
+    if (singerGreeting) {
+        singerGreeting.addEventListener('click', () => {
+            // Simulate settings click
+            settingsBtn.click();
+        });
+    }
+
+    // 3. Populate Profile Selector
+    async function populateProfileSelector() {
+        if (!profileSelect) return;
+
+        try {
+            const profiles = await dbManager.getAllProfiles();
+            const currentSinger = localStorage.getItem('pitchWizSinger');
+
+            // Clear except first option
+            profileSelect.innerHTML = '<option value="" disabled>Select a profile...</option><option value="guest">Guest (New)</option>';
+
+            profiles.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.singer;
+                option.textContent = p.singer;
+                if (p.singer === currentSinger) option.selected = true;
+                profileSelect.appendChild(option);
+            });
+        } catch (e) {
+            console.error('Error loading profiles', e);
+        }
+    }
+
+    // 4. Handle Profile Change
+    if (profileSelect) {
+        profileSelect.addEventListener('change', async (e) => {
+            const selectedSinger = e.target.value;
+
+            if (selectedSinger === 'guest') {
+                // Clear current singer
+                localStorage.removeItem('pitchWizSinger');
+                localStorage.removeItem('pitchWizRange');
+            } else {
+                // Set singer
+                localStorage.setItem('pitchWizSinger', selectedSinger);
+
+                // Load range from DB and cache it
+                try {
+                    const profile = await dbManager.getSingerProfile(selectedSinger);
+                    if (profile) {
+                        localStorage.setItem('pitchWizRange', JSON.stringify({
+                            min: profile.lowestNote,
+                            max: profile.highestNote
+                        }));
+                    }
+                } catch (err) {
+                    console.warn('Could not load range during switch', err);
+                }
+            }
+
+            // Reload to apply changes (Simpler than resetting all state manually)
+            window.location.reload();
+        });
+    }
+
+    // Initial calls
+    updateSingerGreeting();
+    populateProfileSelector();
+
     // Zoom level slider
     zoomLevelInput.addEventListener('input', (e) => {
         const zoom = parseInt(e.target.value) / 100;
