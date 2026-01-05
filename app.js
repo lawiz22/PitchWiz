@@ -430,6 +430,50 @@ function init() {
         canvas.style.cursor = 'grab';
     });
 
+    // --- Touch Events (Mobile Support) ---
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            e.preventDefault();
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startVZoom = visualizer.zoomLevel;
+            startHZoom = visualizer.horizontalZoom;
+            startWaveformZoom = visualizer.waveformZoom || 1.0;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        e.preventDefault();
+
+        const deltaX = e.touches[0].clientX - startX;
+        const deltaY = e.touches[0].clientY - startY;
+        const currentMode = visualizer.mode;
+
+        if (currentMode === 'tuner') {
+            const vZoomChange = -deltaY / 100;
+            const newWaveformZoom = Math.max(0.5, Math.min(3.0, startWaveformZoom + vZoomChange));
+            visualizer.waveformZoom = newWaveformZoom;
+        } else {
+            const vZoomChange = -deltaY / 100;
+            const hZoomChange = deltaX / 100;
+
+            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomChange));
+            const newHZoom = Math.max(0.01, Math.min(3.0, startHZoom + hZoomChange));
+
+            visualizer.setZoomLevel(newVZoom);
+            zoomValue.textContent = `${newVZoom.toFixed(1)}x`;
+            zoomLevelInput.value = Math.round(newVZoom * 100);
+
+            visualizer.setHorizontalZoom(newHZoom);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+        isDragging = false;
+    });
+
     // Recording functionality
     // Delegated to handleRecordClick using State Machine
     recordBtn.addEventListener('click', handleRecordClick);

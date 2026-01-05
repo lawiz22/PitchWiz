@@ -7,21 +7,39 @@
     "background_color": "#0f0f1e",
     "theme_color": "#1a1a2e",
     "orientation": "portrait-primary",
+    "id": "/",
+    "scope": "/",
     "icons": [
         {
             "src": "icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
-    "categories": ["music", "utilities", "education"],
+    "categories": [
+        "music",
+        "utilities",
+        "education"
+    ],
     "screenshots": [
         {
             "src": "screenshot.png",

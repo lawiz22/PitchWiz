@@ -512,6 +512,7 @@ setTimeout(() => {
         let startVZoom = 1.0;
         let startHZoom = 1.0;
 
+        // Mouse Events
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX;
@@ -550,8 +551,44 @@ setTimeout(() => {
             canvas.style.cursor = 'grab';
         });
 
+        // --- Touch Events (Mobile Support) ---
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                e.preventDefault(); // Prevent scrolling
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                if (intervalState.visualizer) {
+                    startVZoom = intervalState.visualizer.zoomLevel || 1.0;
+                    startHZoom = intervalState.visualizer.horizontalZoom || 1.0;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDragging || !intervalState.visualizer || e.touches.length !== 1) return;
+            e.preventDefault(); // Prevent scrolling
+
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+
+            // Horizontal = H-Zoom
+            const hZoomDelta = deltaX * 0.003;
+            const newHZoom = Math.max(0.5, Math.min(3.0, startHZoom + hZoomDelta));
+            intervalState.visualizer.horizontalZoom = newHZoom;
+
+            // Vertical = V-Zoom
+            const vZoomDelta = -deltaY * 0.005;
+            const newVZoom = Math.max(0.5, Math.min(3.0, startVZoom + vZoomDelta));
+            intervalState.visualizer.setZoom(newVZoom);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
         canvas.style.cursor = 'grab';
-        console.log('âœ Enhanced drag controls: Left/Right = H-Zoom, Up/Down = V-Zoom');
+        console.log('✅ Enhanced drag controls: Mouse + Touch supported');
     }
 }, 100);
 
