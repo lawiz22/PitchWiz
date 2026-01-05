@@ -130,9 +130,12 @@ function init() {
     visualizer = new Visualizer(canvas);
 
     // Create pitch detector
+    const a4Input = document.getElementById('a4Frequency');
+    const smoothInput = document.getElementById('smoothing');
+
     pitchDetector = new PitchDetector({
-        a4Frequency: parseInt(a4FrequencyInput?.value || 440),
-        smoothingFactor: parseInt(smoothingInput?.value || 70) / 100,
+        a4Frequency: parseInt(a4Input?.value || 440),
+        smoothingFactor: parseInt(smoothInput?.value || 70) / 100,
         onPitchDetected: handlePitchDetected,
         onError: handleError
     });
