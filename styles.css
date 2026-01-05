@@ -1777,24 +1777,25 @@ body {
    ========================================= */
 
 /* Configuration Modal */
+/* Configuration Modal */
 .level-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-top: 8px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 4px;
 }
 
 .level-card {
     background: var(--color-bg-secondary);
-    border: 2px solid var(--color-bg-tertiary);
+    border: 1px solid var(--color-bg-tertiary);
     border-radius: var(--radius-md);
-    padding: 12px;
+    padding: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     text-align: center;
 }
 
@@ -1804,24 +1805,37 @@ body {
 }
 
 .level-card.selected {
-    border-color: var(--color-accent-primary);
-    background: rgba(108, 92, 231, 0.1);
-    box-shadow: 0 0 15px rgba(108, 92, 231, 0.15);
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+.level-card.selected .lvl-icon {
+    /* Make emoji/icon pop or stay same */
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.level-card.selected .lvl-info strong {
+    color: #fff;
+}
+
+.level-card.selected .lvl-info span {
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .lvl-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .lvl-info strong {
     display: block;
     color: var(--color-text-primary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 2px;
 }
 
 .lvl-info span {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--color-text-secondary);
 }
 
@@ -1829,30 +1843,35 @@ body {
     display: flex;
     background: var(--color-bg-secondary);
     border-radius: var(--radius-md);
-    padding: 4px;
-    gap: 4px;
+    padding: 3px;
+    gap: 3px;
     border: 1px solid var(--color-bg-tertiary);
+    margin-top: 4px;
 }
 
 .toggle-btn {
     flex: 1;
     background: transparent;
     border: none;
-    padding: 8px;
+    padding: 6px;
     border-radius: var(--radius-sm);
     color: var(--color-text-secondary);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .toggle-btn:hover {
+    color: var(--color-text-primary);
     background: rgba(255, 255, 255, 0.05);
 }
 
 .toggle-btn.active {
-    background: var(--color-bg-primary);
     color: var(--color-accent-primary);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     font-weight: 600;
@@ -1897,7 +1916,10 @@ body {
     border-radius: 20px;
 }
 
-.interval-visualizer {`r`n    width: 100%;`r`n    max-width: 600px;`r`n    margin: 0 auto;
+.interval-visualizer {
+    `r`n width: 100%;
+    `r`n max-width: 600px;
+    `r`n margin: 0 auto;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2017,7 +2039,16 @@ body {
 }
 
 /* Fullscreen Modal Override */
-.modal-content.fullscreen-content {`r`n    width: 100%;`r`n    height: 100%;`r`n    max-width: none;`r`n    border-radius: 0;`r`n    display: flex;`r`n    overflow: auto;`r`n}
+.modal-content.fullscreen-content {
+    `r`n width: 100%;
+    `r`n height: 100%;
+    `r`n max-width: none;
+    `r`n border-radius: 0;
+    `r`n display: flex;
+    `r`n overflow: auto;
+    `r`n
+}
+
 /* Ensure Save Modal is above Fullscreen Interval Modal */
 #saveRecordingModal {
     z-index: 2000;
@@ -2062,15 +2093,17 @@ body {
     height: 100px !important;
     font-size: 24px !important;
 }
+
 .note-puck .note-val {
     font-size: 22px !important;
 }
+
 .note-puck .note-label {
     font-size: 11px !important;
 }
 
 /* Ensure interval buttons are visible */
-.interval-pucks + * {
+.interval-pucks+* {
     display: flex !important;
     gap: 10px;
     justify-content: center;
@@ -2078,7 +2111,9 @@ body {
 }
 
 /* Show interval buttons container */
-#btnRecordInterval, #btnSaveInterval, #btnRetryInterval {
+#btnRecordInterval,
+#btnSaveInterval,
+#btnRetryInterval {
     display: inline-flex !important;
 }
 
@@ -2097,33 +2132,41 @@ body {
     width: 60px !important;
     height: 60px !important;
 }
+
 .note-puck .note-val {
     font-size: 18px !important;
 }
+
 .note-puck .note-label {
     font-size: 9px !important;
     margin-top: 2px !important;
 }
+
 .interval-arrow {
     font-size: 20px !important;
 }
+
 .instruction-text {
     font-size: 14px !important;
     margin: 5px 0 !important;
 }
+
 .interval-visualizer {
     gap: 10px !important;
     margin: 10px auto 0 auto !important;
 }
+
 .interval-pucks {
     gap: 20px !important;
     margin-top: 10px !important;
     margin-bottom: 15px !important;
 }
+
 .interval-actions {
     padding: 10px !important;
     margin-top: 10px !important;
 }
+
 .control-btn {
     padding: 8px 16px !important;
     font-size: 13px !important;
