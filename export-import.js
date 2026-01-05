@@ -47,6 +47,8 @@ function checkJSZip() {
 
 // --- EXPORT FUNCTIONALITY ---
 
+// --- EXPORT FUNCTIONALITY ---
+
 async function exportLibrary() {
     if (!checkJSZip()) return;
 
@@ -60,19 +62,20 @@ async function exportLibrary() {
         updateProgress(20, 'Fetching profiles...');
         const profiles = await dbManager.getAllProfiles();
 
-        // 2. Get scores from localStorage
+        // 2. Get ALL pitchWiz settings from localStorage (Scores, Range, Singer, etc.)
         updateProgress(30, 'Exporting local settings...');
-        const scores = {};
-        for (let key in localStorage) {
-            if (key.startsWith('pitchWiz_scores_')) {
-                scores[key] = localStorage.getItem(key);
+        const localSettings = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('pitchWiz')) {
+                localSettings[key] = localStorage.getItem(key);
             }
         }
 
         // 3. Create manifest
         const manifest = {
             exportDate: new Date().toISOString(),
-            version: '1.0',
+            version: '1.2', // Bumped version
             singer: localStorage.getItem('pitchWizSinger'),
             recordingCount: recordings.length
         };
@@ -80,7 +83,8 @@ async function exportLibrary() {
         // 4. Create ZIP
         const zip = new JSZip();
         zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-        zip.file('library.json', JSON.stringify({ recordings, profiles, scores }, null, 2));
+        // Use 'settings' key for clarity, but keep 'scores' for backward compat in mind if needed
+        zip.file('library.json', JSON.stringify({ recordings, profiles, settings: localSettings }, null, 2));
 
         // 5. Add audio files
         const recordingsFolder = zip.folder('recordings');
@@ -118,12 +122,13 @@ async function exportLibrary() {
         const a = document.createElement('a');
         a.href = url;
         const dateStr = new Date().toISOString().split('T')[0];
-        a.download = `pitchwiz-library-${dateStr}.zip`;
+        const singerName = manifest.singer ? `-${manifest.singer.replace(/[^a-z0-9]/gi, '_')}` : '';
+        a.download = `pitchwiz-library${singerName}-${dateStr}.zip`;
         a.click();
 
         setTimeout(() => URL.revokeObjectURL(url), 1000); // Cleanup
 
-        showComplete('Export Complete! 📦', `Successfully exported ${processed} recordings.`);
+        showComplete('Export Complete! 📦', `Successfully exported ${processed} recordings and all settings.`);
 
     } catch (error) {
         console.error('Export failed:', error);
@@ -140,7 +145,9 @@ async function handleFileSelect(event) {
     // Reset input so same file can be selected again
     event.target.value = '';
 
-    await importLibrary(file);
+    if (confirm('Importing will add new recordings. For settings (Singer, Range), the import will OVERWRITE current settings if they exist in the backup. Continue?')) {
+        await importLibrary(file);
+    }
 }
 
 async function importLibrary(file) {
@@ -165,7 +172,12 @@ async function importLibrary(file) {
         }
         updateProgress(20, 'Parsing library data...');
         const libraryText = await zip.file('library.json').async('text');
-        const { recordings, profiles, scores } = JSON.parse(libraryText);
+        // Support both old 'scores' and new 'settings' format
+        const data = JSON.parse(libraryText);
+        const recordings = data.recordings || [];
+        const profiles = data.profiles || [];
+        // Consolidate settings: new export uses 'settings', old used 'scores' (only subset)
+        const settings = data.settings || data.scores || {};
 
         // 4. Get existing recordings for duplicate detection
         updateProgress(30, 'Checking for duplicates...');
@@ -203,7 +215,7 @@ async function importLibrary(file) {
                         await dbManager.saveRecording({
                             ...recording,
                             audioBlob: audioBlob
-                        }); // Removed 'true' as saveRecording doesn't accept a second arg
+                        });
 
                         imported++;
                     } else {
@@ -225,6 +237,8 @@ async function importLibrary(file) {
                     const existing = await dbManager.getSingerProfile(profile.singer);
                     if (!existing) {
                         await dbManager.saveSingerProfile(profile.singer, profile.min, profile.max);
+                    } else {
+                        // Optional: Update if newer? For now, keep existing to be safe.
                     }
                 } catch (e) {
                     console.warn('Profile import error', e);
@@ -232,27 +246,42 @@ async function importLibrary(file) {
             }
         }
 
-        // 7. Import scores (merge)
-        updateProgress(90, 'Importing progress...');
-        if (scores) {
-            for (let key in scores) {
-                if (!localStorage.getItem(key)) {
-                    localStorage.setItem(key, scores[key]);
-                } else {
-                    // Intelligent merge for scores?
-                    // For now, simpler is better: Keep existing if present.
-                    // User requested "import only the one who are not already there"
+        // 7. Import Settings (Range, Singer, Scores, Screenshots)
+        updateProgress(90, 'Restoring settings & progress...');
+        if (settings) {
+            let settingsRestored = 0;
+            for (let key in settings) {
+                // Determine if we should overwrite
+                // Policy: If the key starts with pitchWiz, restore it.
+                // This covers: pitchWizSinger, pitchWizRange, pitchWiz_scores_*, etc.
+
+                // If it's the current singer or range, we definitely want to restore if we are in a "fresh" state
+                // logic: If we have NO settings, restore everything.
+                // If we have settings, asking the user was handled in handleFileSelect confirm()
+
+                try {
+                    localStorage.setItem(key, settings[key]);
+                    settingsRestored++;
+                } catch (e) {
+                    console.error("Error restoring setting " + key, e);
                 }
             }
+            console.log(`Restored ${settingsRestored} settings keys.`);
         }
 
-        // Refresh UI
+        // 8. Refresh and Reload
         updateProgress(95, 'Refreshing library...');
         if (typeof loadRecordings === 'function') {
             await loadRecordings();
         }
 
-        showComplete('Import Complete! 📥', `Added: ${imported} | Skipped: ${skipped} | Errors: ${errors}`);
+        // Reload page to apply new singer/range settings effectively
+        updateProgress(100, 'Reloading app...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+        showComplete('Import Complete! 📥', `Added: ${imported} recordings. App will reload to apply settings.`);
 
     } catch (error) {
         console.error('Import failed:', error);
