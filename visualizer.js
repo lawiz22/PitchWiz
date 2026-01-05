@@ -401,7 +401,7 @@ class Visualizer {
     noteToY(midiNote, height) {
         // Apply zoom level and vertical pan
         const effectiveRange = this.noteRange / this.zoomLevel;
-        const centerNote = (this.minNote + this.maxNote) / 2 + this.verticalPan;
+        const centerNote = (this.minNote + this.maxNote) / 2 - this.verticalPan;
         const effectiveMin = centerNote - effectiveRange / 2;
         const effectiveMax = centerNote + effectiveRange / 2;
 
