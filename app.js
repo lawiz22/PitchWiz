@@ -681,12 +681,15 @@ function init() {
     canvas.style.cursor = 'grab';
 
 
-    // Close modal on outside click
-    settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) {
-            closeSettingsModal();
-        }
-    });
+    // Close modal on outside click (modal removed - now using settings view)
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                closeSettingsModal();
+            }
+        });
+    }
 
     // Reset Library button (Development)
     const resetLibraryBtn = document.getElementById('resetLibraryBtn');
