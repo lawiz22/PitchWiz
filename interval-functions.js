@@ -3,42 +3,60 @@
 // ============================================
 
 // --- DIFFICULTY LEVELS ---
+// --- DIFFICULTY LEVELS ---
 const INTERVAL_LEVELS = {
     beginner: {
-        name: "Beginner",
+        name: "Easy",
         intervals: [
-            { name: 'Minor 2nd', semi: 1 },
-            { name: 'Major 2nd', semi: 2 }
+            { name: 'Major 2nd', semi: 2 },
+            { name: 'Major 3rd', semi: 4 },
+            { name: 'Perfect 5th', semi: 7 },
+            { name: 'Octave', semi: 12 }
         ],
-        description: "Steps (2nd)"
+        description: "Fundamental (Oct, M2, M3, P5)"
     },
     intermediate: {
         name: "Intermediate",
         intervals: [
-            { name: 'Major 3rd', semi: 4 },
-            { name: 'Minor 3rd', semi: 3 },
-            { name: 'Perfect 5th', semi: 7 }
+            // Easy
+            { name: 'Major 2nd', semi: 2 }, { name: 'Major 3rd', semi: 4 },
+            { name: 'Perfect 5th', semi: 7 }, { name: 'Octave', semi: 12 },
+            // Intermediate Adds
+            { name: 'Minor 2nd', semi: 1 }, { name: 'Minor 3rd', semi: 3 },
+            { name: 'Perfect 4th', semi: 5 }, { name: 'Major 6th', semi: 9 }
         ],
-        description: "Basic (3rd/5th)"
+        description: "Basic (+ m2, m3, P4, M6)"
     },
     advanced: {
         name: "Advanced",
         intervals: [
-            { name: 'Perfect 4th', semi: 5 },
-            { name: 'Major 6th', semi: 9 },
-            { name: 'Minor 6th', semi: 8 }
+            // Intermediate
+            { name: 'Major 2nd', semi: 2 }, { name: 'Major 3rd', semi: 4 },
+            { name: 'Perfect 5th', semi: 7 }, { name: 'Octave', semi: 12 },
+            { name: 'Minor 2nd', semi: 1 }, { name: 'Minor 3rd', semi: 3 },
+            { name: 'Perfect 4th', semi: 5 }, { name: 'Major 6th', semi: 9 },
+            // Advanced Adds
+            { name: 'Minor 6th', semi: 8 }, { name: 'Tritone', semi: 6 },
+            { name: 'Minor 7th', semi: 10 }, { name: 'Major 7th', semi: 11 }
         ],
-        description: "Tension (4th/6th)"
+        description: "Tension (+ TT, m6, 7ths)"
     },
     expert: {
         name: "Expert",
         intervals: [
-            { name: 'Minor 7th', semi: 10 },
-            { name: 'Major 7th', semi: 11 },
-            { name: 'Octave', semi: 12 },
-            { name: 'Tritone', semi: 6 }
+            // Advanced
+            { name: 'Major 2nd', semi: 2 }, { name: 'Major 3rd', semi: 4 },
+            { name: 'Perfect 5th', semi: 7 }, { name: 'Octave', semi: 12 },
+            { name: 'Minor 2nd', semi: 1 }, { name: 'Minor 3rd', semi: 3 },
+            { name: 'Perfect 4th', semi: 5 }, { name: 'Major 6th', semi: 9 },
+            { name: 'Minor 6th', semi: 8 }, { name: 'Tritone', semi: 6 },
+            { name: 'Minor 7th', semi: 10 }, { name: 'Major 7th', semi: 11 },
+            // Expert Adds
+            { name: 'Minor 9th', semi: 13 }, { name: 'Major 9th', semi: 14 },
+            { name: 'Perfect 11th', semi: 17 }, { name: 'Augmented 11th', semi: 18 },
+            { name: 'Major 13th', semi: 21 }
         ],
-        description: "Leaps (7th/Oct)"
+        description: "Extensions (+ 9th, 11th, 13th)"
     }
 };
 
@@ -321,6 +339,11 @@ async function toggleIntervalRecording() {
         if (!stream || !stream.active) {
             alert('Microphone is not active.');
             return;
+        }
+
+        // Reset pitch diagram when starting to sing
+        if (intervalState.visualizer) {
+            intervalState.visualizer.pitchHistory = [];
         }
 
         intervalState.isRecording = true;
