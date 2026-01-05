@@ -464,6 +464,20 @@ function init() {
         });
     }
 
+    // Right-Side Labels Checkbox
+    const showRightLabelsCheckbox = document.getElementById('showRightLabels');
+    if (showRightLabelsCheckbox) {
+        // Load saved
+        const savedRightLabels = localStorage.getItem('pitchWiz_showRightLabels') === 'true';
+        showRightLabelsCheckbox.checked = savedRightLabels;
+        if (visualizer) visualizer.showRightLabels = savedRightLabels;
+
+        showRightLabelsCheckbox.addEventListener('change', (e) => {
+            if (visualizer) visualizer.showRightLabels = e.target.checked;
+            localStorage.setItem('pitchWiz_showRightLabels', e.target.checked);
+        });
+    }
+
     // Waveform gain slider
     const waveformGainInput = document.getElementById('waveformGain');
     const waveformGainValue = document.getElementById('waveformGainValue');
