@@ -430,6 +430,21 @@ function init() {
         });
     }
 
+    // Auto-Zoom toggle
+    const autoZoomCheckbox = document.getElementById('autoZoom');
+    if (autoZoomCheckbox) {
+        // Load saved setting
+        const savedAutoZoom = localStorage.getItem('pitchWiz_autoZoom') === 'true';
+        autoZoomCheckbox.checked = savedAutoZoom;
+        if (visualizer) visualizer.autoZoom = savedAutoZoom;
+
+        autoZoomCheckbox.addEventListener('change', (e) => {
+            const isEnabled = e.target.checked;
+            if (visualizer) visualizer.autoZoom = isEnabled;
+            localStorage.setItem('pitchWiz_autoZoom', isEnabled);
+        });
+    }
+
     // Waveform gain slider
     const waveformGainInput = document.getElementById('waveformGain');
     const waveformGainValue = document.getElementById('waveformGainValue');

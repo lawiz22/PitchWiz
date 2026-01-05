@@ -33,8 +33,13 @@ class Visualizer {
         this.showSpectrogramNotes = true; // Show note labels on spectrogram
         this.waveformZoom = 1.0; // Tuner waveform zoom: 0.5 to 3.0
         this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
+        this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
 
-
+        // Auto-Zoom State
+        this.autoZoom = false;
+        this.autoZoomSilenceTimer = 0;
+        this.autoZoomTargetPan = 0;
+        this.autoZoomTargetZoom = 1.0;
         // Animation
         this.animationId = null;
         this.isRunning = false;
@@ -216,6 +221,9 @@ class Visualizer {
      * Draw pitch diagram visualization
      */
     drawPitchDiagram() {
+        // Update Auto-Zoom
+        this.updateAutoZoom();
+
         // Clear canvas
         this.ctx.fillStyle = this.colors.background;
         this.ctx.fillRect(0, 0, this.width, this.height);
