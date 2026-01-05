@@ -199,6 +199,27 @@ function init() {
                 if (window.progressTracker) {
                     await updateProgressUI();
                 }
+            } else if (mode === 'view') {
+                // View mode - show visualization with current view mode
+                visualizationContainer.style.display = 'block';
+
+                // Apply the current view mode from the switcher
+                const currentMode = viewModes[currentViewModeIndex];
+                visualizer.setMode(currentMode);
+
+                // Show/hide appropriate UI elements based on current view mode
+                if (currentMode === 'tuner') {
+                    if (waveformGainControl) waveformGainControl.style.display = 'block';
+                    if (noteDisplay) noteDisplay.style.display = 'none';
+                } else {
+                    if (waveformGainControl) waveformGainControl.style.display = 'none';
+                    if (noteDisplay) noteDisplay.style.display = 'block';
+                }
+
+                // Start visualizer if listening
+                if (isListening) {
+                    visualizer.start();
+                }
             } else {
                 // Visualization Modes
                 visualizationContainer.style.display = 'block';
@@ -231,12 +252,117 @@ function init() {
         });
     });
 
+    // View Mode Switcher
+    const viewModeSwitcher = document.getElementById('viewModeSwitcher');
+    const currentViewModeDisplay = document.getElementById('currentViewMode');
+    const viewModes = ['pitch-diagram', 'spectrogram', 'tuner'];
+    const viewModeNames = {
+        'pitch-diagram': 'Pitch',
+        'spectrogram': 'Spectro',
+        'tuner': 'Tuner'
+    };
+    let currentViewModeIndex = 0;
+
+    if (viewModeSwitcher) {
+        viewModeSwitcher.addEventListener('click', () => {
+            // Cycle to next mode
+            currentViewModeIndex = (currentViewModeIndex + 1) % viewModes.length;
+            const newMode = viewModes[currentViewModeIndex];
+
+            // Update display
+            if (currentViewModeDisplay) {
+                currentViewModeDisplay.textContent = viewModeNames[newMode];
+            }
+
+            // Switch visualizer mode
+            visualizer.setMode(newMode);
+
+            // Show/hide appropriate UI elements
+            const noteDisplay = document.getElementById('noteDisplay');
+            const waveformGainControl = document.getElementById('waveformGainControl');
+
+            if (newMode === 'tuner') {
+                if (noteDisplay) noteDisplay.style.display = 'flex';
+                if (waveformGainControl) waveformGainControl.style.display = 'flex';
+            } else {
+                if (noteDisplay) noteDisplay.style.display = 'none';
+                if (waveformGainControl) waveformGainControl.style.display = 'none';
+            }
+        });
+    }
+
+    // Tuning Reference Modal
+    const tuningRefBtn = document.getElementById('tuningRefBtn');
+    const tuningRefModal = document.getElementById('tuningRefModal');
+    const tuningRefInput = document.getElementById('tuningRefInput');
+    const tuningRefSave = document.getElementById('tuningRefSave');
+    const tuningRefCancel = document.getElementById('tuningRefCancel');
+    const closeTuningRef = document.getElementById('closeTuningRef');
+    const tuningRefDisplay = document.getElementById('tuningRefDisplay');
+
+    // Function to update tuning reference display
+    function updateTuningReferenceDisplay(freq) {
+        if (tuningRefDisplay) {
+            tuningRefDisplay.textContent = `A4 = ${freq}Hz`;
+        }
+    }
+
+    // Open tuning reference modal
+    if (tuningRefBtn) {
+        tuningRefBtn.addEventListener('click', () => {
+            if (tuningRefModal && tuningRefInput) {
+                tuningRefInput.value = pitchDetector.referenceFrequency;
+                tuningRefModal.classList.add('active');
+            }
+        });
+    }
+
+    // Save tuning reference
+    if (tuningRefSave) {
+        tuningRefSave.addEventListener('click', () => {
+            const newFreq = parseFloat(tuningRefInput.value);
+            if (newFreq >= 400 && newFreq <= 480) {
+                pitchDetector.setReferenceFrequency(newFreq);
+                updateTuningReferenceDisplay(newFreq);
+                // Also update settings modal input
+                if (a4FrequencyInput) {
+                    a4FrequencyInput.value = newFreq;
+                }
+                if (tuningRefModal) {
+                    tuningRefModal.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    // Cancel/Close tuning reference modal
+    if (tuningRefCancel) {
+        tuningRefCancel.addEventListener('click', () => {
+            if (tuningRefModal) tuningRefModal.classList.remove('active');
+        });
+    }
+    if (closeTuningRef) {
+        closeTuningRef.addEventListener('click', () => {
+            if (tuningRefModal) tuningRefModal.classList.remove('active');
+        });
+    }
+
+    // Close modal on background click
+    if (tuningRefModal) {
+        tuningRefModal.addEventListener('click', (e) => {
+            if (e.target === tuningRefModal) {
+                tuningRefModal.classList.remove('active');
+            }
+        });
+    }
 
     // Settings inputs
     a4FrequencyInput.addEventListener('change', (e) => {
         const freq = parseInt(e.target.value);
         pitchDetector.setA4Frequency(freq);
         a4Reference.textContent = `${freq} Hz`;
+        // Update tuning reference display in header
+        updateTuningReferenceDisplay(freq);
     });
 
     smoothingInput.addEventListener('input', (e) => {
