@@ -98,42 +98,36 @@ body {
 /* ===== HEADER ===== */
 .header {
     display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) 0;
-    margin-bottom: var(--spacing-lg);
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+    margin-bottom: var(--spacing-sm);
 }
 
-.header-row-1 {
+/* Navigation Container with Actions */
+.nav-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
     gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
-.header-row-2 {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.header-actions-left,
-.header-actions-right {
+.nav-actions {
     display: flex;
     gap: var(--spacing-xs);
     align-items: center;
 }
 
-/* Main Action Buttons (below tabs) */
-.main-actions {
+/* Floating Controls (Profile/Settings) */
+.floating-controls {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-md);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-sm) 0;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    z-index: 100;
 }
 
 .logo {
@@ -258,6 +252,11 @@ body {
 .icon-btn.large svg {
     width: 28px;
     height: 28px;
+}
+
+.nav-actions .icon-btn svg {
+    width: 24px;
+    height: 24px;
 }
 
 .icon-btn:hover {
