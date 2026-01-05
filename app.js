@@ -404,12 +404,14 @@ function init() {
     });
 
 
-    if (smoothingInput) {
-        smoothingInput.addEventListener('input', (e) => {
+    const smoothingInputElement = document.getElementById('smoothing');
+    if (smoothingInputElement) {
+        smoothingInputElement.addEventListener('input', (e) => {
             const smoothing = parseInt(e.target.value);
             pitchDetector.setSmoothingFactor(smoothing);
         });
     }
+
 
 
     // Tuning threshold slider
