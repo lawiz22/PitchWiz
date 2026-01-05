@@ -26,75 +26,47 @@ A Progressive Web App for real-time pitch detection and visualization, perfect f
 
 ## How to Use
 
-### Running Locally
+## Mobile Installation (The Easy Way) 🚀
 
-Choose one of the following methods to run PitchWiz on your computer:
+The best way to use PitchWiz on your phone is to access it via the web (GitHub Pages).
 
-#### Option 1: Python (Recommended - Easiest)
+### 1. Open the App
+Go to: **`https://lawiz22.github.io/PitchWiz/`**
 
-**If you don't have Python installed:**
-1. Download Python from [python.org](https://www.python.org/downloads/)
-2. During installation, check "Add Python to PATH"
-3. Restart your terminal/command prompt
+### 2. Install as App (PWA)
+PitchWiz is a Progressive Web App (PWA). This means you can install it without the App Store/Play Store, and it works offline!
 
-**To run the app:**
+**📱 On iPhone (iOS)**
+1.  Tap the **Share** button (box with arrow).
+2.  Scroll down and tap **"Add to Home Screen"**.
+3.  Tap **Add**.
+4.  Launch "PitchWiz" from your home screen (it will hide the address bar).
+
+**📱 On Android**
+1.  Tap the **Menu** (three dots ⋮).
+2.  Tap **"Install App"** (or "Add to Home Screen").
+3.  Confirm **Install**.
+4.  It will appear in your app drawer like a native app.
+
+---
+
+## Local Development (For Developers) 💻
+
+If you want to modify the code or run it on your PC:
+
+### Option 1: Python (Recommended)
+1.  Ensure Python is installed.
+2.  Open terminal in project folder:
+    ```bash
+    python -m http.server 8000
+    ```
+3.  Open `http://localhost:8000`
+
+### Option 2: Node.js
 ```bash
-# Navigate to the PitchWiz folder
-cd path/to/PitchWiz
-
-# Start the server
-python -m http.server 8000
-```
-Then open your browser to `http://localhost:8000`
-
-#### Option 2: Node.js
-
-**If you don't have Node.js installed:**
-1. Download Node.js from [nodejs.org](https://nodejs.org/)
-2. Install using the default settings
-3. Restart your terminal/command prompt
-
-**To run the app:**
-```bash
-# Navigate to the PitchWiz folder
-cd path/to/PitchWiz
-
-# Start the server (no installation needed)
 npx http-server -p 8000
 ```
-Then open your browser to `http://localhost:8000`
-
-#### Option 3: VS Code Live Server (For Developers)
-
-1. Install [Visual Studio Code](https://code.visualstudio.com/)
-2. Install the "Live Server" extension
-3. Open the PitchWiz folder in VS Code
-4. Right-click `index.html` → "Open with Live Server"
-
-#### Option 4: Double-Click (Limited Functionality)
-
-⚠️ **Not Recommended** - Some features may not work due to browser security restrictions
-
-Simply double-click `index.html` to open it in your browser. However, microphone access and some features may be blocked.
-
-### Using the App
-
-1. Click **"Start Listening"** to activate your microphone
-2. Grant microphone permissions when prompted
-3. Play or sing a note
-4. Watch the real-time pitch detection and visualization
-5. Toggle between **Spectrogram** and **Tuner** modes
-6. Adjust settings via the gear icon
-
-### Installing as PWA
-
-**On Desktop (Chrome/Edge):**
-- Click the install icon in the address bar
-- Or go to Menu → Install PitchWiz
-
-**On Mobile (Chrome/Safari):**
-- Tap the share/menu button
-- Select "Add to Home Screen"
+Open `http://localhost:8000`
 
 ### Backup & Restore (Export/Import)
 
