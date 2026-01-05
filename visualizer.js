@@ -33,13 +33,14 @@ class Visualizer {
         this.showSpectrogramNotes = true; // Show note labels on spectrogram
         this.waveformZoom = 1.0; // Tuner waveform zoom: 0.5 to 3.0
         this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
-        this.waveformGain = 2.0; // Tuner waveform amplitude: 0.5 to 5.0
 
         // Auto-Zoom State
         this.autoZoom = false;
+        this.autoZoomSpeed = 2.0; // Seconds to look back (Re-zoom Delay)
         this.autoZoomSilenceTimer = 0;
         this.autoZoomTargetPan = 0;
         this.autoZoomTargetZoom = 1.0;
+
         // Animation
         this.animationId = null;
         this.isRunning = false;
@@ -156,6 +157,13 @@ class Visualizer {
     }
 
     /**
+     * Set Auto-Zoom Speed (Lookback duration)
+     */
+    setAutoZoomSpeed(seconds) {
+        this.autoZoomSpeed = Math.max(0.5, Math.min(5.0, seconds));
+    }
+
+    /**
      * Add pitch data point
      */
     addPitchData(pitchData) {
@@ -224,38 +232,46 @@ class Visualizer {
     updateAutoZoom() {
         if (!this.autoZoom) return;
 
-        // 1. Analyze Active Range (Last ~2 seconds = 120 frames at 60fps)
-        const lookbackFrames = 120;
+        // 1. Analyze Active Range
+        // Use user-defined speed (seconds) converted to frames (approx 60fps)
+        const fps = 60;
+        const lookbackFrames = Math.floor(this.autoZoomSpeed * fps);
         const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.frequency && p.frequency > 0);
 
         if (recentPitches.length < 10) {
             // Not enough data or silence
             this.autoZoomSilenceTimer++;
-            if (this.autoZoomSilenceTimer > 180) { // 3 seconds of silence
-                // Gently reset or hold valid view
-                // For now, hold last valid view
+            // Only reset if silence lasts longer than the memory window
+            if (this.autoZoomSilenceTimer > lookbackFrames) {
+                // Could reset here if needed
             }
             return;
         }
 
         this.autoZoomSilenceTimer = 0;
 
-        let activeMin = 1000;
-        let activeMax = 0;
-        let activeSum = 0;
-
-        // Calculate range and check for stability
+        // ROBUST RANGE CALCULATION (Glitch Filtering)
+        // 1. Calculate MIDI note values for all valid pitches
+        const pitchValues = [];
         for (const p of recentPitches) {
-            // FIX: p.note is a string (e.g. "C4"). We need the numeric MIDI value.
-            // Calculate from frequency: note = 12 * log2(freq/440) + 69
-            if (!p.frequency) continue;
-
-            const pitchVal = 12 * Math.log2(p.frequency / 440) + 69;
-
-            if (pitchVal < activeMin) activeMin = pitchVal;
-            if (pitchVal > activeMax) activeMax = pitchVal;
-            activeSum += pitchVal;
+            const val = 12 * Math.log2(p.frequency / 440) + 69;
+            pitchValues.push(val);
         }
+
+        // 2. Sort values to find percentiles
+        pitchValues.sort((a, b) => a - b);
+
+        // 3. Ignore outliers (bottom 5% and top 5%)
+        // This filters out momentary glitches/spikes
+        const lowIndex = Math.floor(pitchValues.length * 0.05);
+        const highIndex = Math.floor(pitchValues.length * 0.95);
+
+        // Safety clamp
+        const safeLowIndex = Math.max(0, lowIndex);
+        const safeHighIndex = Math.min(pitchValues.length - 1, highIndex);
+
+        const activeMin = pitchValues[safeLowIndex];
+        const activeMax = pitchValues[safeHighIndex];
 
         const currentPitchRange = activeMax - activeMin;
         const currentCenter = (activeMin + activeMax) / 2;

@@ -445,6 +445,25 @@ function init() {
         });
     }
 
+    // Auto-Zoom Speed Slider
+    const autoZoomSpeedInput = document.getElementById('autoZoomSpeed');
+    const autoZoomSpeedValue = document.getElementById('autoZoomSpeedValue');
+    if (autoZoomSpeedInput && autoZoomSpeedValue) {
+        // Load saved setting
+        const savedSpeed = localStorage.getItem('pitchWiz_autoZoomSpeed') || 20; // Default 2.0s
+        autoZoomSpeedInput.value = savedSpeed;
+        const speedSec = parseInt(savedSpeed) / 10;
+        autoZoomSpeedValue.textContent = `${speedSec.toFixed(1)}s`;
+        if (visualizer) visualizer.setAutoZoomSpeed(speedSec);
+
+        autoZoomSpeedInput.addEventListener('input', (e) => {
+            const speed = parseInt(e.target.value) / 10;
+            autoZoomSpeedValue.textContent = `${speed.toFixed(1)}s`;
+            if (visualizer) visualizer.setAutoZoomSpeed(speed);
+            localStorage.setItem('pitchWiz_autoZoomSpeed', e.target.value);
+        });
+    }
+
     // Waveform gain slider
     const waveformGainInput = document.getElementById('waveformGain');
     const waveformGainValue = document.getElementById('waveformGainValue');
