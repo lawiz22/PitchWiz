@@ -589,18 +589,23 @@ setTimeout(() => {
 
                 intervalState.visualizer.setZoom(newZoom);
             } else if (e.touches.length === 1) {
-                // Single-finger pan - adjust horizontal zoom for panning effect
+                // Single-finger drag - horizontal for h-zoom, vertical for pan
                 const deltaX = e.touches[0].clientX - lastTouchX;
                 const deltaY = e.touches[0].clientY - lastTouchY;
 
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
 
-                // Horizontal pan via horizontal zoom adjustment
+                // Horizontal drag = horizontal zoom
                 const currentHZoom = intervalState.visualizer.horizontalZoom || 1.0;
                 const hZoomChange = deltaX * 0.003;
                 const newHZoom = Math.max(0.1, Math.min(5.0, currentHZoom + hZoomChange));
                 intervalState.visualizer.horizontalZoom = newHZoom;
+
+                // Vertical drag = vertical pan
+                const currentPan = intervalState.visualizer.verticalPan || 0;
+                const panChange = -deltaY * 0.05;
+                intervalState.visualizer.verticalPan = currentPan + panChange;
             }
         }, { passive: false });
 
