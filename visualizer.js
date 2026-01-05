@@ -102,8 +102,9 @@ class Visualizer {
         this.zoomLevel = 1.0;
         this.verticalPan = 0;
         this.horizontalZoom = 1.0;
-        this.autoZoom = false; // Optional: disable auto-zoom on manual reset? User didn't specify, but often safer. Keeping enabled might be preferred if they just want a momentary reset.
-        // Let's keep autoZoom state as is, but reset the transforms.
+        // Keep autoZoom state as is (user request)
+
+        // Also update UI sliders if they exist
         // Actually, if auto-zoom is on, it will fight the reset immediately. 
         // Best to momentarily disable or let it re-converge.
         // User asked: "reset the pitchdiagram". I'll reset values. if Auto-Zoom is ON, it will just zoom back in. That's probably expected behavior (momentary reset).
