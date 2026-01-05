@@ -414,17 +414,21 @@ function init() {
 
 
 
-    // Tuning threshold slider
-    tuningThresholdInput.addEventListener('input', (e) => {
-        tuningThreshold = parseInt(e.target.value);
-        tuningThresholdValue.textContent = tuningThreshold;
-    });
+    // Tuning threshold slider (removed - using tuningTolerance instead)
+    if (tuningThresholdInput) {
+        tuningThresholdInput.addEventListener('input', (e) => {
+            tuningThreshold = parseInt(e.target.value);
+            if (tuningThresholdValue) tuningThresholdValue.textContent = tuningThreshold;
+        });
+    }
 
     // Spectrogram note labels checkbox
     const showSpectrogramNotesCheckbox = document.getElementById('showSpectrogramNotes');
-    showSpectrogramNotesCheckbox.addEventListener('change', (e) => {
-        visualizer.showSpectrogramNotes = e.target.checked;
-    });
+    if (showSpectrogramNotesCheckbox) {
+        showSpectrogramNotesCheckbox.addEventListener('change', (e) => {
+            visualizer.showSpectrogramNotes = e.target.checked;
+        });
+    }
 
     // Waveform gain slider
     const waveformGainInput = document.getElementById('waveformGain');
