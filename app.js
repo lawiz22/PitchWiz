@@ -400,13 +400,16 @@ function init() {
     }
 
     // Settings inputs
-    a4FrequencyInput.addEventListener('change', (e) => {
-        const freq = parseInt(e.target.value);
-        pitchDetector.setA4Frequency(freq);
-        a4Reference.textContent = `${freq} Hz`;
-        // Update tuning reference display in header
-        updateTuningReferenceDisplay(freq);
-    });
+    const a4FrequencyInput = document.getElementById('a4Frequency');
+    if (a4FrequencyInput) {
+        a4FrequencyInput.addEventListener('change', (e) => {
+            const freq = parseInt(e.target.value);
+            pitchDetector.setA4Frequency(freq);
+            if (a4Reference) a4Reference.textContent = `${freq} Hz`;
+            // Update tuning reference display in header
+            updateTuningReferenceDisplay(freq);
+        });
+    }
 
 
     const smoothingInputElement = document.getElementById('smoothing');
@@ -486,11 +489,13 @@ function init() {
     // Waveform gain slider
     const waveformGainInput = document.getElementById('waveformGain');
     const waveformGainValue = document.getElementById('waveformGainValue');
-    waveformGainInput.addEventListener('input', (e) => {
-        const gain = parseInt(e.target.value) / 100;
-        visualizer.waveformGain = gain;
-        waveformGainValue.textContent = `${gain.toFixed(1)}x`;
-    });
+    if (waveformGainInput && waveformGainValue) {
+        waveformGainInput.addEventListener('input', (e) => {
+            const gain = parseInt(e.target.value) / 100;
+            visualizer.waveformGain = gain;
+            waveformGainValue.textContent = `${gain.toFixed(1)}x`;
+        });
+    }
 
     // Main UI waveform gain slider
     const waveformGainMainInput = document.getElementById('waveformGainMain');
@@ -545,6 +550,7 @@ function init() {
     }
 
     // Tuning tolerance slider
+    const tuningToleranceInput = document.getElementById('tuningTolerance');
     if (tuningToleranceInput && tuningToleranceValue) {
         tuningToleranceInput.addEventListener('input', (e) => {
             tuningThreshold = parseInt(e.target.value);
@@ -554,6 +560,9 @@ function init() {
     }
 
     // Populate note range selectors (C0 to C8)
+    const minNoteSelect = document.getElementById('minNoteSelect');
+    const maxNoteSelect = document.getElementById('maxNoteSelect');
+
     if (minNoteSelect && maxNoteSelect) {
         const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
         for (let octave = 0; octave <= 8; octave++) {
@@ -602,6 +611,7 @@ function init() {
     }
 
     // Detection mode toggle
+    const detectionModeBtns = document.querySelectorAll('.detection-mode-btn');
     if (detectionModeBtns.length > 0) {
         detectionModeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -746,6 +756,7 @@ function init() {
     // populateProfileSelector(); // Moved to dbManager.init() callback
 
     // Zoom level slider
+    const zoomLevelInput = document.getElementById('zoomLevel');
     if (zoomLevelInput) {
         zoomLevelInput.addEventListener('input', (e) => {
             const zoom = parseInt(e.target.value) / 100;
@@ -755,11 +766,14 @@ function init() {
     }
 
     // Scan speed slider
-    scanSpeedInput.addEventListener('input', (e) => {
-        const speed = parseInt(e.target.value) / 100;
-        visualizer.setScanSpeed(speed);
-        scanSpeedValue.textContent = `${speed.toFixed(1)}x`;
-    });
+    const scanSpeedInput = document.getElementById('scanSpeed');
+    if (scanSpeedInput) {
+        scanSpeedInput.addEventListener('input', (e) => {
+            const speed = parseInt(e.target.value) / 100;
+            visualizer.setScanSpeed(speed);
+            if (scanSpeedValue) scanSpeedValue.textContent = `${speed.toFixed(1)}x`;
+        });
+    }
 
     // Mouse drag: vertical = vertical zoom, horizontal = horizontal zoom
     let isDragging = false;
