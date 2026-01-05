@@ -271,26 +271,16 @@ class Visualizer {
         }
 
         // Clamp ranges
-        targetNoteRange = Math.max(12, Math.min(48, targetNoteRange)); // Min 1 octave, Max 4 octaves
+        targetNoteRange = Math.max(10, Math.min(48, targetNoteRange));
 
         // Calculate Target Zoom: ZoomLevel = DefaultNoteRange (48) / TargetNoteRange
-        // Example: If target range is 12 (1 octave), Zoom = 48/12 = 4.0x
-        // We use this.noteRange which is 48 by default (C1-C5)
         const baseNoteRange = this.maxNote - this.minNote;
         let targetZoom = baseNoteRange / targetNoteRange;
 
-        // Clamp Zoom to valid limits (0.5x to 5.0x)
+        // Clamp Zoom to valid limits - INCREASED MAX ZOOM to 5.0x
         targetZoom = Math.max(0.5, Math.min(5.0, targetZoom));
 
         // Calculate Target Pan (Center Offset)
-        // Default center is (min+max)/2. We want new center to be 'currentCenter'.
-        // verticalPan shifts the center. 
-        // Logic: displayedCenter = defaultCenter + verticalPan
-        // So: verticalPan = displayedCenter - defaultCenter
-        // CORRECTION based on previous debugging:
-        // noteToY uses: centerNote = (min + max) / 2 + verticalPan
-        // So: centerNote (target) = defaultCenter + verticalPan
-        // verticalPan = targetCenter - defaultCenter
         const defaultCenter = (this.minNote + this.maxNote) / 2;
         let targetPan = currentCenter - defaultCenter;
 
@@ -298,18 +288,26 @@ class Visualizer {
         targetPan = Math.max(-24, Math.min(24, targetPan));
 
         // 3. Smooth Interpolation (Lerp)
-        const smoothFactor = 0.05; // 5% approach per frame
+        const smoothFactor = 0.1; // FASTER! 10% approach per frame
 
         // Apply smooth zoom
         const zoomDiff = targetZoom - this.zoomLevel;
         if (Math.abs(zoomDiff) > 0.01) {
             this.setZoomLevel(this.zoomLevel + zoomDiff * smoothFactor);
+            // Sync UI slider if possible
+            const zoomSlider = document.getElementById('zoomLevel');
+            const zoomValue = document.getElementById('zoomValue');
+            if (zoomSlider && zoomValue) {
+                zoomSlider.value = Math.round(this.zoomLevel * 100);
+                zoomValue.textContent = `${this.zoomLevel.toFixed(1)}x`;
+            }
         }
 
         // Apply smooth pan
         const panDiff = targetPan - this.verticalPan;
         if (Math.abs(panDiff) > 0.1) {
             this.verticalPan += panDiff * smoothFactor;
+            // console.log(`AutoZoom: Range=${currentPitchRange.toFixed(1)} Center=${currentCenter.toFixed(1)} TargetZoom=${targetZoom.toFixed(1)}`);
         }
     }
 
