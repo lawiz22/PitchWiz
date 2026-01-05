@@ -259,11 +259,15 @@ class Visualizer {
         let targetNoteRange;
 
         // "Focus Mode": If range is very small (steady note), zoom in tight
-        if (currentPitchRange < 3) {
-            targetNoteRange = 12; // 1 octave view for steady notes
+        if (currentPitchRange < 4) {
+            // Very steady note -> Tight focus
+            targetNoteRange = 14;
+        } else if (currentPitchRange < 12) {
+            // Small melody -> Medium focus
+            targetNoteRange = currentPitchRange + 10;
         } else {
-            // "Melody Mode": Fit range with padding
-            targetNoteRange = currentPitchRange + 12; // Range + 1 octave padding
+            // Wide melody -> Fit range with padding
+            targetNoteRange = currentPitchRange + 8;
         }
 
         // Clamp ranges
