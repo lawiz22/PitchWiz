@@ -800,6 +800,64 @@ body {
     animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Compact Modal Overrides for Interval Config */
+.modal-content.compact {
+    max-width: 360px;
+    padding: 12px;
+    width: 90%;
+}
+
+#intervalConfigModal .modal-header {
+    margin-bottom: 8px;
+    padding-bottom: 0;
+    min-height: auto;
+}
+
+#intervalConfigModal .modal-header h2 {
+    font-size: 1rem;
+    margin: 0;
+}
+
+#intervalConfigModal .modal-body {
+    padding: 0;
+    gap: 8px;
+}
+
+#intervalConfigModal .form-group {
+    margin-bottom: 0;
+}
+
+#intervalConfigModal .form-group label {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+#intervalConfigModal .level-card {
+    padding: 8px;
+    gap: 4px;
+}
+
+#intervalConfigModal .lvl-icon {
+    font-size: 1.1rem;
+}
+
+#intervalConfigModal .lvl-info strong {
+    font-size: 0.8rem;
+}
+
+#intervalConfigModal .lvl-info span {
+    font-size: 0.65rem;
+    line-height: 1.1;
+}
+
+#intervalConfigModal .toggle-btn {
+    padding: 5px;
+    font-size: 0.75rem;
+}
+
 .modal-content.small {
     max-width: 400px;
 }
