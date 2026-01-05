@@ -690,6 +690,50 @@ function init() {
         });
     }
 
+    // 5. Handle Save Profile
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
+    const profileNameInput = document.getElementById('profileName');
+
+    if (saveProfileBtn && profileNameInput) {
+        saveProfileBtn.addEventListener('click', async () => {
+            const name = profileNameInput.value.trim();
+            if (!name) {
+                alert('Please enter a profile name.');
+                return;
+            }
+
+            try {
+                // Save to DB (defaults to guest range if creating new, or updates existing)
+                // For new profile, we might want to force calibration?
+                // For now, just save entry.
+                const existing = await dbManager.getSingerProfile(name);
+                if (!existing) {
+                    await dbManager.saveSingerProfile(name, null, null); // Null range triggers calibration
+                }
+
+                // Set as current
+                localStorage.setItem('pitchWizSinger', name);
+
+                // Clear input
+                profileNameInput.value = '';
+
+                // Refresh UI
+                await populateProfileSelector();
+                updateSingerGreeting();
+
+                // Select in dropdown
+                if (profileSelect) profileSelect.value = name;
+
+                alert(`Profile "${name}" created/selected!`);
+                window.location.reload();
+
+            } catch (e) {
+                console.error('Error saving profile:', e);
+                alert('Failed to save profile: ' + e.message);
+            }
+        });
+    }
+
     // Initial calls
     updateSingerGreeting();
     // populateProfileSelector(); // Moved to dbManager.init() callback
