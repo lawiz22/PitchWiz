@@ -114,7 +114,7 @@ body {
 
 .header-row-2 {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: var(--spacing-sm);
 }
@@ -122,8 +122,18 @@ body {
 .header-actions-left,
 .header-actions-right {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     align-items: center;
+}
+
+/* Main Action Buttons (below tabs) */
+.main-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) 0;
 }
 
 .logo {
@@ -221,6 +231,33 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.icon-btn.compact {
+    width: 36px;
+    height: 36px;
+    padding: var(--spacing-xs);
+}
+
+.icon-btn.compact svg {
+    width: 18px;
+    height: 18px;
+}
+
+.icon-btn.compact .profile-name {
+    font-size: 0.75rem;
+    margin-left: 4px;
+}
+
+.icon-btn.large {
+    width: 56px;
+    height: 56px;
+    padding: var(--spacing-md);
+}
+
+.icon-btn.large svg {
+    width: 28px;
+    height: 28px;
 }
 
 .icon-btn:hover {
@@ -1310,31 +1347,38 @@ body {
 /* App Status Indicator */
 .app-status {
     font-size: var(--font-size-sm);
-    font-weight: 700;
-    color: var(--color-text-muted);
-    letter-spacing: 1px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 4px 12px;
-    border-radius: 12px;
+    font-weight: 600;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     transition: all var(--transition-base);
 }
 
+.app-status.compact {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+}
+
+.app-status.idle {
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+}
+
 .app-status.listening {
-    color: var(--color-accent-tertiary);
-    background: rgba(0, 210, 211, 0.1);
-    box-shadow: 0 0 10px rgba(0, 210, 211, 0.2);
+    color: var(--color-accent-primary);
+    background: rgba(108, 92, 231, 0.1);
 }
 
 .app-status.recording {
-    color: var(--color-danger);
-    background: rgba(255, 71, 87, 0.1);
-    box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);
-    animation: pulseStatus 1.5s infinite;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    animation: pulse 1.5s ease-in-out infinite;
 }
 
 .app-status.playback {
-    color: var(--color-accent-primary);
-    background: rgba(108, 92, 231, 0.1);
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
 }
 
 @keyframes pulseStatus {
