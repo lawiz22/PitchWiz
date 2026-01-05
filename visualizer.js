@@ -275,8 +275,8 @@ class Visualizer {
         const baseNoteRange = this.maxNote - this.minNote;
         let targetZoom = baseNoteRange / targetNoteRange;
 
-        // Clamp Zoom to valid limits (0.5x to 3.0x)
-        targetZoom = Math.max(0.5, Math.min(3.0, targetZoom));
+        // Clamp Zoom to valid limits (0.5x to 5.0x)
+        targetZoom = Math.max(0.5, Math.min(5.0, targetZoom));
 
         // Calculate Target Pan (Center Offset)
         // Default center is (min+max)/2. We want new center to be 'currentCenter'.
