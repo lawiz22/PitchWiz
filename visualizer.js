@@ -99,6 +99,7 @@ class Visualizer {
      * Reset view to default state
      */
     resetView() {
+        this.clear(); // Clear data to truly reset the "diagram" and Auto-Zoom state
         this.zoomLevel = 1.0;
         this.verticalPan = 0;
         this.horizontalZoom = 1.0;
