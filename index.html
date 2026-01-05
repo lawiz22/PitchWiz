@@ -44,6 +44,10 @@
                 </svg>
                 <h1>PitchWiz</h1>
             </div>
+            <div class="header-center" id="singerGreeting" style="display:none; cursor:pointer;"
+                title="Click to change profile">
+                👋 Hello <span id="singerNameDisplay">Guest</span>
+            </div>
             <div id="appStatus" class="app-status compact">IDLE</div>
         </header>
 
@@ -533,10 +537,13 @@
                     <div class="settings-grid">
                         <div class="setting-item">
                             <label for="profileSelect">Current Profile</label>
-                            <select id="profileSelect">
-                                <option value="guest">Guest</option>
-                            </select>
-                            <span class="setting-hint">Select or create a singer profile</span>
+                            <div class="select-wrapper">
+                                <select id="profileSelect" class="styled-select">
+                                    <option value="" disabled selected>Select a profile...</option>
+                                    <option value="guest">Guest</option>
+                                </select>
+                            </div>
+                            <span class="setting-hint">Select to load range & progress</span>
                         </div>
                         <div class="setting-item">
                             <label for="profileName">Profile Name</label>
