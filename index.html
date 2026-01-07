@@ -314,41 +314,69 @@
 
         <!-- Range Calibration Modal -->
         <div id="rangeCalibrationModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content calibration-modal">
                 <div class="modal-header">
-                    <h2>🎵 Calibrate Your Vocal Range</h2>
+                    <h2>🎵 Calibrate Range</h2>
                     <button class="close-btn" onclick="closeRangeCalibration()">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="calibration-instruction">Let's find your comfortable singing range!</p>
+                    <p class="calibration-instruction">Choose your comfortable singing range</p>
 
-                    <div class="calibration-step">
-                        <h3>Step 1: Lowest Note</h3>
-                        <p>Sing your lowest comfortable note and hold it</p>
-                        <button class="btn-calibrate" id="btnRecordLowest" onclick="recordLowestNote()">
-                            <span class="btn-icon">🎤</span>
-                            <span class="btn-text">Record Lowest Note</span>
-                        </button>
-                        <div class="detected-note" id="detectedLowest">--</div>
-                    </div>
+                    <div class="calibration-methods">
+                        <!-- Manual Selection -->
+                        <div class="calibration-method">
+                            <h3>Manual Selection</h3>
+                            <div class="note-selectors">
+                                <div class="note-selector-group">
+                                    <label>Lowest Note</label>
+                                    <select id="manualLowestNote" class="note-select" onchange="onManualNoteChange()">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div class="note-selector-group">
+                                    <label>Highest Note</label>
+                                    <select id="manualHighestNote" class="note-select" onchange="onManualNoteChange()">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="calibration-step">
-                        <h3>Step 2: Highest Note</h3>
-                        <p>Sing your highest comfortable note and hold it</p>
-                        <button class="btn-calibrate" id="btnRecordHighest" onclick="recordHighestNote()" disabled>
-                            <span class="btn-icon">🎤</span>
-                            <span class="btn-text">Record Highest Note</span>
-                        </button>
-                        <div class="detected-note" id="detectedHighest">--</div>
+                        <div class="method-divider">
+                            <span>OR</span>
+                        </div>
+
+                        <!-- Singing Detection -->
+                        <div class="calibration-method">
+                            <h3>Sing to Detect</h3>
+                            <div class="calibration-steps">
+                                <div class="calibration-step-compact">
+                                    <button class="btn-calibrate-compact" id="btnRecordLowest"
+                                        onclick="recordLowestNote()">
+                                        <span class="btn-icon">🎤</span>
+                                        <span class="btn-text">Lowest</span>
+                                    </button>
+                                    <div class="detected-note-compact" id="detectedLowest">--</div>
+                                </div>
+
+                                <div class="calibration-step-compact">
+                                    <button class="btn-calibrate-compact" id="btnRecordHighest"
+                                        onclick="recordHighestNote()" disabled>
+                                        <span class="btn-icon">🎤</span>
+                                        <span class="btn-text">Highest</span>
+                                    </button>
+                                    <div class="detected-note-compact" id="detectedHighest">--</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="range-result" id="rangeResult" style="display: none;">
-                        <h3>✅ Your Range</h3>
-                        <p class="range-summary">
+                        <div class="range-summary">
                             <strong><span id="resultLowest">--</span> to <span id="resultHighest">--</span></strong>
-                            (<span id="resultCount">--</span> notes)
-                        </p>
-                        <button class="btn-primary" onclick="saveVocalRange()">Save & Continue</button>
+                            <span class="range-count">(<span id="resultCount">--</span> notes)</span>
+                        </div>
+                        <button class="btn-primary-compact" onclick="saveVocalRange()">💾 Save Range</button>
                     </div>
                 </div>
             </div>
@@ -549,6 +577,20 @@
                             <label for="profileName">Profile Name</label>
                             <input type="text" id="profileName" placeholder="Enter profile name">
                             <button class="btn-secondary" id="saveProfileBtn">Save Profile</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calibration Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">Vocal Range Calibration</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>Calibrate Your Range</label>
+                            <button class="btn primary" id="settingsCalibrationBtn" onclick="openRangeCalibration()">
+                                📊 Calibrate Range
+                            </button>
+                            <span class="setting-hint">Set your lowest and highest comfortable notes</span>
                         </div>
                     </div>
                 </div>

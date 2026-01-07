@@ -97,10 +97,14 @@ function openRangeCalibration() {
         calibrationState = { lowest: null, highest: null };
     }
 
+    // Reset displays
     document.getElementById('detectedLowest').textContent = '--';
     document.getElementById('detectedHighest').textContent = '--';
     document.getElementById('btnRecordHighest').disabled = true;
     document.getElementById('rangeResult').style.display = 'none';
+
+    // Populate manual note selection dropdowns
+    populateNoteDropdowns();
 }
 
 function closeRangeCalibration() {
@@ -418,6 +422,63 @@ function generateNoteList(startNote, endNote) {
     }
     return list;
 }
+
+// Populate note selection dropdowns
+function populateNoteDropdowns() {
+    const lowestSelect = document.getElementById('manualLowestNote');
+    const highestSelect = document.getElementById('manualHighestNote');
+
+    if (!lowestSelect || !highestSelect) return;
+
+    // Generate all possible notes from C1 to C6
+    const allNotes = generateNoteList('C1', 'C6');
+
+    // Clear existing options (except the first placeholder)
+    lowestSelect.innerHTML = '<option value="">Select...</option>';
+    highestSelect.innerHTML = '<option value="">Select...</option>';
+
+    // Populate both dropdowns
+    allNotes.forEach(note => {
+        const optionLow = document.createElement('option');
+        optionLow.value = note;
+        optionLow.textContent = note;
+        lowestSelect.appendChild(optionLow);
+
+        const optionHigh = document.createElement('option');
+        optionHigh.value = note;
+        optionHigh.textContent = note;
+        highestSelect.appendChild(optionHigh);
+    });
+}
+
+// Handle manual note selection change
+function onManualNoteChange() {
+    const lowestSelect = document.getElementById('manualLowestNote');
+    const highestSelect = document.getElementById('manualHighestNote');
+
+    if (!lowestSelect || !highestSelect) return;
+
+    const lowest = lowestSelect.value;
+    const highest = highestSelect.value;
+
+    // Update calibration state
+    if (lowest) {
+        calibrationState.lowest = lowest;
+        document.getElementById('detectedLowest').textContent = lowest;
+        document.getElementById('btnRecordHighest').disabled = false;
+    }
+
+    if (highest) {
+        calibrationState.highest = highest;
+        document.getElementById('detectedHighest').textContent = highest;
+    }
+
+    // If both are selected, display the result
+    if (lowest && highest) {
+        displayCalibrationResult();
+    }
+}
+
 
 function updateDashboardProgress() {
     const singerName = localStorage.getItem('pitchWizSinger') || (typeof currentSinger !== 'undefined' ? currentSinger : null);
