@@ -1384,12 +1384,13 @@ async function loadRecordings() {
             console.log(`Recording ${rec.id} notes:`, notesPracticed);
 
             if (notesPracticed && notesPracticed.length > 0) {
+                const maxNotes = 4; // Limit to 4 notes on display
                 notesHtml = `<div class="recording-notes">
-                    ${notesPracticed.slice(0, 8).map(note => { // Limit to 8 notes
+                    ${notesPracticed.slice(0, maxNotes).map(note => {
                     const color = getNoteColor(note.replace(/\d+/, '')); // Remove octave for color
                     return `<div class="note-chip-mini" style="background-color: ${color}; color: #000;">${note}</div>`;
                 }).join('')}
-                    ${notesPracticed.length > 8 ? `<div class="note-chip-mini" style="background: rgba(255,255,255,0.2); color: #fff;">+${notesPracticed.length - 8}</div>` : ''}
+                    ${notesPracticed.length > maxNotes ? `<div class="note-chip-mini" style="background: rgba(255,255,255,0.2); color: #fff;">+${notesPracticed.length - maxNotes}</div>` : ''}
                 </div>`;
             }
 
@@ -1460,23 +1461,15 @@ async function loadRecordings() {
                 <div class="recording-info">
                     <div class="recording-title" id="title-${rec.id}">${rec.name || (rec.mode.charAt(0).toUpperCase() + rec.mode.slice(1) + ' Session')}</div>
                     <div class="recording-meta-row">
-                        <span class="category-badge">${rec.category || 'freestyle'}</span>
+                        <span class="category-badge">${(rec.category || 'freestyle').toUpperCase()}</span>
                         <span class="meta-separator"></span>
-                        <span class="recording-date">${new Date(rec.date).toLocaleString()}</span>
+                        <span class="recording-date">${new Date(rec.date).toLocaleDateString()}</span>
                         <span class="meta-separator"></span>
                         <span>${formatDuration(rec.duration)}</span>
-                        <span class="meta-separator"></span>
-                        <span>${rec.mode} Mode</span>
                         ${(metrics.timeInTune !== undefined || metadata.timeInTune !== undefined) ? `
                         <span class="meta-separator"></span>
-                        <span title="Process Quality" style="color: ${(metrics.timeInTune || metadata.timeInTune) > 80 ? 'var(--color-success)' : 'var(--color-text-secondary)'}">
-                           ${metrics.timeInTune || metadata.timeInTune || 0}% Tuned
-                        </span>
-                        ` : ''}
-                        ${(metrics.avgCentsDeviation !== undefined || metadata.avgCentsDeviation !== undefined) ? `
-                        <span class="meta-separator"></span>
-                        <span title="Average Deviation">
-                           ${metrics.avgCentsDeviation || metadata.avgCentsDeviation || 0}¢ Dev
+                        <span title="Tuning Quality" style="color: ${(metrics.timeInTune || metadata.timeInTune) > 80 ? 'var(--color-success)' : 'var(--color-text-secondary)'}">
+                           ${metrics.timeInTune || metadata.timeInTune || 0}% 🎯
                         </span>
                         ` : ''}
                     </div>
