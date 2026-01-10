@@ -995,6 +995,21 @@ async function recordExerciseAttempt() {
             let canvasScreenshot = null;
             if (practiceVisualizer && canvas) {
                 try {
+                    // CRITICAL FIX: Ensure canvas is at full resolution before screenshot
+                    // CSS scaling on mobile might have changed display size
+                    const currentWidth = canvas.width;
+                    const currentHeight = canvas.height;
+
+                    // Force canvas to full resolution if it's been scaled down
+                    if (currentWidth !== 700 || currentHeight !== 200) {
+                        canvas.width = 700;
+                        canvas.height = 200;
+                        // Redraw the visualizer at full resolution
+                        if (practiceVisualizer && typeof practiceVisualizer.drawPitchDiagram === 'function') {
+                            practiceVisualizer.drawPitchDiagram();
+                        }
+                    }
+
                     canvasScreenshot = canvas.toDataURL('image/png');
                 } catch (e) {
                     console.warn('Failed to capture canvas screenshot:', e);
