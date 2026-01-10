@@ -472,6 +472,24 @@ function init() {
         });
     }
 
+    // Auto-Zoom Range Slider
+    const autoZoomRangeInput = document.getElementById('autoZoomRange');
+    const autoZoomRangeValue = document.getElementById('autoZoomRangeValue');
+    if (autoZoomRangeInput && autoZoomRangeValue) {
+        // Load saved setting
+        const savedRange = localStorage.getItem('pitchWiz_autoZoomRange') || 6; // Default 6 notes
+        autoZoomRangeInput.value = savedRange;
+        autoZoomRangeValue.textContent = savedRange;
+        if (visualizer) visualizer.autoZoomRange = parseInt(savedRange);
+
+        autoZoomRangeInput.addEventListener('input', (e) => {
+            const range = parseInt(e.target.value);
+            autoZoomRangeValue.textContent = range;
+            if (visualizer) visualizer.autoZoomRange = range;
+            localStorage.setItem('pitchWiz_autoZoomRange', range);
+        });
+    }
+
     // Right-Side Labels Checkbox
     const showRightLabelsCheckbox = document.getElementById('showRightLabels');
     if (showRightLabelsCheckbox) {

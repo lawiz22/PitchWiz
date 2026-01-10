@@ -520,7 +520,12 @@
                         <div class="setting-item auto-zoom-item">
                             <label for="autoZoomSpeed">Re-zoom Delay: <span id="autoZoomSpeedValue">2.0s</span></label>
                             <input type="range" id="autoZoomSpeed" min="5" max="50" value="20" step="5">
-                            <span class="setting-hint">How fast it zooms back in (0.5s - 5s)</span>
+                            <span class="setting-hint">How long to wait before re-zooming after silence</span>
+                        </div>
+                        <div class="setting-item auto-zoom-item">
+                            <label for="autoZoomRange">Zoom Range: <span id="autoZoomRangeValue">6</span> notes</label>
+                            <input type="range" id="autoZoomRange" min="2" max="12" value="6" step="1">
+                            <span class="setting-hint">Target note range: 2 = very close, 12 = wide view</span>
                         </div>
                         <div class="setting-item">
                             <label for="viewModeSelect">View Mode</label>

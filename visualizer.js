@@ -41,6 +41,7 @@ class Visualizer {
         this.autoZoomSilenceTimer = 0;
         this.autoZoomTargetPan = 0;
         this.autoZoomTargetZoom = 1.0;
+        this.autoZoomRange = 6; // Target note range (2-12)
 
         // Animation
         this.animationId = null;
@@ -331,23 +332,26 @@ class Visualizer {
         const currentPitchRange = activeMax - activeMin;
         const currentCenter = (activeMin + activeMax) / 2;
 
-        // 2. Determine Targets
+        // 2. Determine Targets using user-defined autoZoomRange
         let targetNoteRange;
 
-        // "Focus Mode": If range is very small (steady note), zoom in tight
+        // Use the user's preferred zoom range as the base target
+        const userTargetRange = this.autoZoomRange;
+
+        // "Focus Mode": If range is very small (steady note), use user's target
         if (currentPitchRange < 4) {
-            // Very steady note -> Tight focus
-            targetNoteRange = 14;
-        } else if (currentPitchRange < 12) {
-            // Small melody -> Medium focus
-            targetNoteRange = currentPitchRange + 10;
+            // Very steady note -> Use user's target range
+            targetNoteRange = userTargetRange;
+        } else if (currentPitchRange < userTargetRange) {
+            // Small melody -> Fit with some padding
+            targetNoteRange = currentPitchRange + 4;
         } else {
-            // Wide melody -> Fit range with padding
-            targetNoteRange = currentPitchRange + 8;
+            // Wide melody -> Fit range with minimal padding
+            targetNoteRange = currentPitchRange + 2;
         }
 
-        // Clamp ranges
-        targetNoteRange = Math.max(10, Math.min(48, targetNoteRange));
+        // Clamp ranges - min is user's target, max is 48
+        targetNoteRange = Math.max(userTargetRange, Math.min(48, targetNoteRange));
 
         // Calculate Target Zoom: ZoomLevel = DefaultNoteRange (48) / TargetNoteRange
         const baseNoteRange = this.maxNote - this.minNote;
