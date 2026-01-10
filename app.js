@@ -129,6 +129,10 @@ function init() {
     // Create visualizer
     visualizer = new Visualizer(canvas);
 
+    // Load auto-zoom range setting immediately after visualizer creation
+    const savedAutoZoomRange = localStorage.getItem('pitchWiz_autoZoomRange') || '6';
+    visualizer.autoZoomRange = parseInt(savedAutoZoomRange);
+
     // Create pitch detector
     const a4Input = document.getElementById('a4Frequency');
     const smoothInput = document.getElementById('smoothing');
@@ -408,6 +412,24 @@ function init() {
             if (a4Reference) a4Reference.textContent = `${freq} Hz`;
             // Update tuning reference display in header
             updateTuningReferenceDisplay(freq);
+        });
+    }
+
+    // Pitch confidence threshold slider
+    const pitchConfidenceInput = document.getElementById('pitchConfidence');
+    const pitchConfidenceValue = document.getElementById('pitchConfidenceValue');
+    if (pitchConfidenceInput && pitchConfidenceValue) {
+        // Load saved setting
+        const savedConfidence = localStorage.getItem('pitchWiz_confidenceThreshold') || 90;
+        pitchConfidenceInput.value = savedConfidence;
+        pitchConfidenceValue.textContent = savedConfidence;
+        window.pitchConfidenceThreshold = parseInt(savedConfidence) / 100;
+
+        pitchConfidenceInput.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            pitchConfidenceValue.textContent = value;
+            window.pitchConfidenceThreshold = value / 100;
+            localStorage.setItem('pitchWiz_confidenceThreshold', value);
         });
     }
 

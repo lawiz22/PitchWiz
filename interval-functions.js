@@ -274,7 +274,8 @@ function checkIntervalPractice(pitchData) {
     }
 
     const sungNote = pitchData.note + pitchData.octave;
-    console.log('Interval Practice: Detected', sungNote, '| Ref:', intervalState.currentRef, '| Tgt:', intervalState.currentTarget);
+    // DEBUG LOG - Commented out to reduce console spam
+    // console.log('Interval Practice: Detected', sungNote, '| Ref:', intervalState.currentRef, '| Tgt:', intervalState.currentTarget);
 
     // 1. Reference Check with COLOR GLOW
     if (sungNote === intervalState.currentRef) {

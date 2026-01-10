@@ -144,7 +144,7 @@ class Visualizer {
      * Set zoom level (1.0 = normal)
      */
     setZoom(zoom) {
-        this.zoomLevel = Math.max(0.5, Math.min(3.0, zoom));
+        this.zoomLevel = Math.max(0.5, Math.min(24.0, zoom));
     }
 
     /**
@@ -169,7 +169,7 @@ class Visualizer {
      * Set zoom level
      */
     setZoomLevel(zoom) {
-        this.zoomLevel = Math.max(0.5, Math.min(3.0, zoom));
+        this.zoomLevel = Math.max(0.5, Math.min(24.0, zoom));
     }
 
     /**
@@ -338,6 +338,11 @@ class Visualizer {
         // Use the user's preferred zoom range as the base target
         const userTargetRange = this.autoZoomRange;
 
+        // DEBUG: Log occasionally to see what value is being used
+        if (Math.random() < 0.05) {
+            console.log('AUTO-ZOOM DEBUG: userTargetRange =', userTargetRange, 'currentPitchRange =', currentPitchRange.toFixed(2));
+        }
+
         // "Focus Mode": If range is very small (steady note), use user's target
         if (currentPitchRange < 4) {
             // Very steady note -> Use user's target range
@@ -357,8 +362,13 @@ class Visualizer {
         const baseNoteRange = this.maxNote - this.minNote;
         let targetZoom = baseNoteRange / targetNoteRange;
 
-        // Clamp Zoom to valid limits - INCREASED MAX ZOOM to 5.0x
-        targetZoom = Math.max(0.5, Math.min(5.0, targetZoom));
+        // DEBUG: Log zoom calculation
+        if (Math.random() < 0.05) {
+            console.log('ZOOM CALC: baseNoteRange =', baseNoteRange, 'targetNoteRange =', targetNoteRange, 'targetZoom =', targetZoom.toFixed(2), 'currentZoom =', this.zoomLevel.toFixed(2));
+        }
+
+        // Clamp Zoom to valid limits - INCREASED MAX ZOOM to 24.0x for 2-note range
+        targetZoom = Math.max(0.5, Math.min(24.0, targetZoom));
 
         // Calculate Target Pan (Center Offset)
         const defaultCenter = (this.minNote + this.maxNote) / 2;
