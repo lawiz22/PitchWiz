@@ -735,28 +735,9 @@ function selectExerciseNote(note) {
                 ctx.fillStyle = '#1a1a2e';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Calculate scaling to maintain aspect ratio
-                const canvasAspect = canvas.width / canvas.height;
-                const imgAspect = img.width / img.height;
-
-                let drawWidth, drawHeight, offsetX, offsetY;
-
-                if (imgAspect > canvasAspect) {
-                    // Image is wider - fit to width
-                    drawWidth = canvas.width;
-                    drawHeight = canvas.width / imgAspect;
-                    offsetX = 0;
-                    offsetY = (canvas.height - drawHeight) / 2;
-                } else {
-                    // Image is taller - fit to height
-                    drawHeight = canvas.height;
-                    drawWidth = canvas.height * imgAspect;
-                    offsetX = (canvas.width - drawWidth) / 2;
-                    offsetY = 0;
-                }
-
-                // Draw with proper aspect ratio
-                ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                // Draw screenshot to fill entire canvas
+                // Both screenshot and canvas should be 700x200
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             };
             img.src = scoreData.screenshot;
         } else {
