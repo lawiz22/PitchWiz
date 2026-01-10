@@ -226,6 +226,43 @@ function init() {
                 // Stop visualizer if running (except playback logic)
                 if (!isPlaybackActive) visualizer.stop();
                 await loadRecordings();
+            } else if (mode === 'practice') {
+                // Validate vocal range before allowing practice
+                const currentSinger = localStorage.getItem('pitchWizSinger');
+                if (!currentSinger) {
+                    alert('Please select or create a user profile first!');
+                    // Switch back to view mode
+                    document.querySelector('[data-mode="view"]').click();
+                    return;
+                }
+
+                // Check if user has vocal range calibrated
+                try {
+                    const profile = await dbManager.getSingerProfile(currentSinger);
+                    if (!profile || !profile.lowestNote || !profile.highestNote) {
+                        const shouldCalibrate = confirm(`Your vocal range is not calibrated yet.\n\nWould you like to calibrate it now?`);
+                        if (shouldCalibrate && typeof openRangeCalibration === 'function') {
+                            openRangeCalibration();
+                        }
+                        // Switch back to view mode
+                        document.querySelector('[data-mode="view"]').click();
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error checking vocal range:', err);
+                    alert('Error checking your profile. Please try again.');
+                    // Switch back to view mode
+                    document.querySelector('[data-mode="view"]').click();
+                    return;
+                }
+
+                practiceView.style.display = 'flex';
+                if (noteDisplay) noteDisplay.style.display = 'none'; // Hide tuner
+                if (!isPlaybackActive) visualizer.stop();
+                // Load Stats
+                if (window.progressTracker) {
+                    await updateProgressUI();
+                }
             } else if (mode === 'progress') {
                 progressView.style.display = 'block';
                 if (noteDisplay) noteDisplay.style.display = 'none'; // Hide tuner
@@ -749,30 +786,28 @@ function init() {
 
     // 5. Handle Save Profile
     const saveProfileBtn = document.getElementById('saveProfileBtn');
-    const profileNameInput = document.getElementById('profileName');
-
-    if (saveProfileBtn && profileNameInput) {
+    if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', async () => {
-            const name = profileNameInput.value.trim();
+            const profileNameInput = document.getElementById('profileName');
+            const name = profileNameInput ? profileNameInput.value.trim() : '';
+
             if (!name) {
                 alert('Please enter a profile name.');
                 return;
             }
 
             try {
-                // Save to DB (defaults to guest range if creating new, or updates existing)
-                // For new profile, we might want to force calibration?
-                // For now, just save entry.
+                // Save to DB
                 const existing = await dbManager.getSingerProfile(name);
                 if (!existing) {
-                    await dbManager.saveSingerProfile(name, null, null); // Null range triggers calibration
+                    await dbManager.saveSingerProfile(name, null, null);
                 }
 
                 // Set as current
                 localStorage.setItem('pitchWizSinger', name);
 
                 // Clear input
-                profileNameInput.value = '';
+                if (profileNameInput) profileNameInput.value = '';
 
                 // Refresh UI
                 await populateProfileSelector();
@@ -782,14 +817,40 @@ function init() {
                 if (profileSelect) profileSelect.value = name;
 
                 alert(`Profile "${name}" created/selected!`);
-                window.location.reload();
-
             } catch (e) {
                 console.error('Error saving profile:', e);
                 alert('Failed to save profile: ' + e.message);
             }
         });
     }
+
+    // Create New User function
+    async function createNewUser() {
+        const name = prompt('Enter new singer name:');
+        if (!name || !name.trim()) {
+            return;
+        }
+
+        // Check if name already exists
+        const profiles = await dbManager.getAllSingerProfiles();
+        if (profiles.some(p => p.name === name.trim())) {
+            alert('A profile with this name already exists!');
+            return;
+        }
+
+        // Store the name temporarily
+        window.pendingNewUserName = name.trim();
+
+        // Open calibration modal
+        if (typeof openRangeCalibration === 'function') {
+            openRangeCalibration();
+        } else {
+            alert('Calibration function not available');
+        }
+    }
+
+    // Make createNewUser globally available
+    window.createNewUser = createNewUser;
 
     // Initial calls
     updateSingerGreeting();
@@ -1254,6 +1315,28 @@ function handlePitchDetected(pitchData) {
     // Always pass data to visualizer (for live mode support)
     visualizer.addPitchData(pitchData);
 
+    // Initialize practice functions if available
+    if (typeof initPracticeFunctions === 'function') {
+        initPracticeFunctions();
+    }
+
+    // Calibrate Range button in Settings
+    const openCalibrateBtn = document.getElementById('openCalibrateBtn');
+    if (openCalibrateBtn) {
+        openCalibrateBtn.addEventListener('click', () => {
+            if (typeof openRangeCalibration === 'function') {
+                openRangeCalibration();
+            }
+        });
+    }
+
+    // Create New User button in Settings
+    const createNewUserBtn = document.getElementById('createNewUserBtn');
+    if (createNewUserBtn) {
+        createNewUserBtn.addEventListener('click', createNewUser);
+    }
+
+    console.log('PitchWiz initialized successfully');
     // Interval Practice Hook
     if (typeof checkIntervalPractice === 'function') {
         checkIntervalPractice(pitchData);

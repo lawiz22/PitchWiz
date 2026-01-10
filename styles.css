@@ -224,6 +224,55 @@ body {
     white-space: nowrap;
 }
 
+/* Practice View Sidebar */
+.practice-sidebar {
+    width: 200px;
+    background: rgba(30, 30, 40, 0.8);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 10px;
+    /* Reduced from default */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Reduced spacing between elements */
+}
+
+.practice-sidebar h2 {
+    font-size: 1.2rem;
+    /* Reduced from larger size */
+    margin: 0 0 8px 0;
+    /* Reduced bottom margin */
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.practice-sidebar .btn {
+    width: 100%;
+    padding: 6px 10px;
+    /* Reduced padding */
+    font-size: 0.85rem;
+    /* Smaller font */
+    margin: 0;
+    /* Remove any default margins */
+}
+
+.btn-reset-progress {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    color: #ff6b6b;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-reset-progress:hover {
+    background: rgba(255, 50, 50, 0.2);
+    border-color: rgba(255, 50, 50, 0.5);
+}
+
 .view-mode-switcher:hover {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--color-accent-primary);

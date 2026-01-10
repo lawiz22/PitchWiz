@@ -275,12 +275,11 @@
             </div>
 
             <!-- Practice Modes View -->
-            <div id="practiceView" class="view-container" style="display: none;">
-                <div class="practice-header">
-                    <h2>🎵 Practice Modes</h2>
-                    <button class="btn-danger-outline" onclick="resetPracticeProgress()"
-                        title="Reset all practice progress">
-                        🔄 Reset Progress
+            <div id="practiceView" class="practice-view" style="display: none;">
+                <div class="practice-sidebar">
+                    <!-- Removed "Practice Modes" title to save space -->
+                    <button class="btn-reset-progress" id="resetProgressBtn" title="Reset all progress">
+                        🔄 Reset
                     </button>
                 </div>
 
@@ -598,11 +597,16 @@
                     <h3 class="section-title">Vocal Range Calibration</h3>
                     <div class="settings-grid">
                         <div class="setting-item">
-                            <label>Calibrate Your Range</label>
-                            <button class="btn primary" id="settingsCalibrationBtn" onclick="openRangeCalibration()">
-                                📊 Calibrate Range
+                            <button class="control-btn" id="openCalibrateBtn">
+                                <span>🎵</span> Calibrate Range
                             </button>
-                            <span class="setting-hint">Set your lowest and highest comfortable notes</span>
+                            <span class="setting-hint">Set your vocal range for practice exercises</span>
+                        </div>
+                        <div class="setting-item">
+                            <button class="control-btn" id="createNewUserBtn">
+                                <span>👤</span> Create New User
+                            </button>
+                            <span class="setting-hint">Create a new singer profile with vocal range</span>
                         </div>
                     </div>
                 </div>

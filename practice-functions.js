@@ -292,18 +292,32 @@ function displayCalibrationResult() {
 async function saveVocalRange() {
     const { lowest, highest } = calibrationState;
 
-    if (!lowest || !highest || !currentSinger) {
+    // Check if we're creating a new user
+    const pendingName = window.pendingNewUserName;
+    const singerName = pendingName || currentSinger;
+
+    if (!lowest || !highest || !singerName) {
         alert('Missing information. Please complete calibration.');
         return;
     }
 
     try {
-        await dbManager.saveSingerProfile(currentSinger, lowest, highest);
+        // Save the profile
+        await dbManager.saveSingerProfile(singerName, lowest, highest);
         console.log('Vocal range saved successfully!');
+
+        // If this was a new user, set them as current and clear pending
+        if (pendingName) {
+            localStorage.setItem('pitchWizSinger', pendingName);
+            window.pendingNewUserName = null;
+            alert(`✅ New user "${pendingName}" created!\n\nVocal range: ${lowest} to ${highest}\n\nReloading...`);
+            window.location.reload();
+            return;
+        }
 
         closeRangeCalibration();
 
-        const profile = await dbManager.getSingerProfile(currentSinger);
+        const profile = await dbManager.getSingerProfile(singerName);
 
         // Cache range for grid
         if (profile && profile.lowestNote && profile.highestNote) {
