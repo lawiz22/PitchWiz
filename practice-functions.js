@@ -726,8 +726,14 @@ function selectExerciseNote(note) {
             // Load and display the saved screenshot
             const img = new Image();
             img.onload = function () {
-                // Clear canvas first
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // CRITICAL: Ensure canvas has correct internal dimensions
+                // CSS might have changed display size, but we need internal size to match
+                canvas.width = 700;
+                canvas.height = 200;
+
+                // Fill background first
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 // Calculate scaling to maintain aspect ratio
                 const canvasAspect = canvas.width / canvas.height;
