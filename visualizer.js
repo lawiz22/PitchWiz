@@ -27,7 +27,7 @@ class Visualizer {
         this.detectionMode = 'on-sound'; // 'on-sound' or 'live'
         this.zoomLevel = 1.0; // Vertical zoom: 0.5 to 3.0
         this.verticalPan = 0; // Vertical pan offset in semitones
-        this.horizontalZoom = 1.0; // Horizontal zoom: 0.5 to 3.0
+        this.horizontalZoom = 2.0; // Horizontal zoom: 0.5 to 3.0 (default 2.0 for more detail)
         this.scanSpeed = 1.0; // 0.5 to 2.0
         this.scrollOffset = 0; // For smooth scrolling
         this.showSpectrogramNotes = true; // Show note labels on spectrogram
@@ -190,7 +190,7 @@ class Visualizer {
      * Set Auto-Zoom Speed (Lookback duration)
      */
     setAutoZoomSpeed(seconds) {
-        this.autoZoomSpeed = Math.max(0.5, Math.min(5.0, seconds));
+        this.autoZoomSpeed = Math.max(0.01, Math.min(5.0, seconds));
     }
 
     /**
@@ -207,7 +207,6 @@ class Visualizer {
                 cents: pitchData ? pitchData.cents : null,
                 timestamp: Date.now()
             });
-
 
             // Keep history limited
             if (this.pitchHistory.length > this.maxHistoryLength) {
@@ -265,7 +264,13 @@ class Visualizer {
         // 1. Analyze Active Range
         // Use user-defined speed (seconds) converted to frames (approx 60fps)
         const fps = 60;
-        const lookbackFrames = Math.floor(this.autoZoomSpeed * fps);
+        let lookbackFrames = Math.floor(this.autoZoomSpeed * fps);
+
+        // For instant re-zoom (< 0.5s), use very short lookback for immediate centering
+        if (this.autoZoomSpeed < 0.5) {
+            lookbackFrames = Math.max(10, lookbackFrames); // Minimum 10 frames (~0.16s) for stability
+        }
+
         const recentPitches = this.pitchHistory.slice(-lookbackFrames).filter(p => p.frequency && p.frequency > 0);
 
         if (recentPitches.length < 10) {
@@ -371,6 +376,7 @@ class Visualizer {
         targetZoom = Math.max(0.5, Math.min(24.0, targetZoom));
 
         // Calculate Target Pan (Center Offset)
+        // Use the MEDIAN pitch (currentCenter) instead of range center for better centering
         const defaultCenter = (this.minNote + this.maxNote) / 2;
         let targetPan = currentCenter - defaultCenter;
 
@@ -378,7 +384,12 @@ class Visualizer {
         targetPan = Math.max(-24, Math.min(24, targetPan));
 
         // 3. Smooth Interpolation (Lerp)
-        const smoothFactor = 0.1; // FASTER! 10% approach per frame
+        // Faster interpolation when re-zoom delay is low for instant response
+        let smoothFactor = 0.1; // Default: 10% approach per frame
+        if (this.autoZoomSpeed < 0.5) {
+            // Very fast re-zoom (< 0.5s) - use faster interpolation
+            smoothFactor = 0.3; // 30% approach per frame for near-instant response
+        }
 
         // Apply smooth zoom
         const zoomDiff = targetZoom - this.zoomLevel;
