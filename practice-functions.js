@@ -968,7 +968,15 @@ async function recordExerciseAttempt() {
     let practiceVisualizer = null;
     if (canvas && typeof Visualizer !== 'undefined') {
         practiceVisualizer = new Visualizer(canvas, { mode: 'pitch-diagram' });
-        practiceVisualizer.resize();
+
+        // CRITICAL FIX: Force fixed internal resolution regardless of CSS display size
+        // Do NOT call resize() which uses getBoundingClientRect and breaks on mobile
+        canvas.width = 700;
+        canvas.height = 200;
+        practiceVisualizer.width = 700;
+        practiceVisualizer.height = 200;
+        // Reset the context scale (resize() sets it to devicePixelRatio, we want 1:1)
+        practiceVisualizer.ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         // Set range around target note (±5 semitones)
         const targetMidi = noteToMidi(targetNote);
