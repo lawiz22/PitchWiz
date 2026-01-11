@@ -968,15 +968,7 @@ async function recordExerciseAttempt() {
     let practiceVisualizer = null;
     if (canvas && typeof Visualizer !== 'undefined') {
         practiceVisualizer = new Visualizer(canvas, { mode: 'pitch-diagram' });
-
-        // CRITICAL FIX: Force fixed internal resolution regardless of CSS display size
-        // Do NOT call resize() which uses getBoundingClientRect and breaks on mobile
-        canvas.width = 700;
-        canvas.height = 200;
-        practiceVisualizer.width = 700;
-        practiceVisualizer.height = 200;
-        // Reset the context scale (resize() sets it to devicePixelRatio, we want 1:1)
-        practiceVisualizer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        practiceVisualizer.resize();
 
         // Set range around target note (±5 semitones)
         const targetMidi = noteToMidi(targetNote);
@@ -1018,26 +1010,94 @@ async function recordExerciseAttempt() {
             clearInterval(timer);
             targetDisplay.classList.remove('recording-pulse');
 
-            // Capture canvas screenshot
+            // Capture canvas screenshot using OFFSCREEN canvas at fixed resolution
+            // This ensures consistent screenshot quality regardless of mobile CSS scaling
             let canvasScreenshot = null;
             if (practiceVisualizer && canvas) {
                 try {
-                    // CRITICAL FIX: Ensure canvas is at full resolution before screenshot
-                    // CSS scaling on mobile might have changed display size
-                    const currentWidth = canvas.width;
-                    const currentHeight = canvas.height;
+                    // Create offscreen canvas at fixed 700x200 resolution
+                    const offscreenCanvas = document.createElement('canvas');
+                    offscreenCanvas.width = 700;
+                    offscreenCanvas.height = 200;
+                    const offCtx = offscreenCanvas.getContext('2d');
 
-                    // Force canvas to full resolution if it's been scaled down
-                    if (currentWidth !== 700 || currentHeight !== 200) {
-                        canvas.width = 700;
-                        canvas.height = 200;
-                        // Redraw the visualizer at full resolution
-                        if (practiceVisualizer && typeof practiceVisualizer.drawPitchDiagram === 'function') {
-                            practiceVisualizer.drawPitchDiagram();
-                        }
+                    // Fill background
+                    offCtx.fillStyle = practiceVisualizer.colors.background;
+                    offCtx.fillRect(0, 0, 700, 200);
+
+                    // Redraw pitch diagram at fixed resolution
+                    // Draw grid first
+                    offCtx.font = '11px Inter, sans-serif';
+                    offCtx.textAlign = 'right';
+                    offCtx.textBaseline = 'middle';
+
+                    const noteColors = practiceVisualizer.noteColors;
+                    const noteNames = practiceVisualizer.noteNames;
+
+                    for (let note = practiceVisualizer.minNote; note <= practiceVisualizer.maxNote; note++) {
+                        const y = 200 - ((note - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
+                        const noteName = noteNames[note % 12];
+                        const octave = Math.floor(note / 12) - 1;
+
+                        // Grid line
+                        offCtx.strokeStyle = note % 12 === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)';
+                        offCtx.lineWidth = note % 12 === 0 ? 1 : 0.5;
+                        offCtx.beginPath();
+                        offCtx.moveTo(50, y);
+                        offCtx.lineTo(700, y);
+                        offCtx.stroke();
+
+                        // Note label
+                        offCtx.fillStyle = noteColors[note % 12];
+                        offCtx.fillText(`${noteName}${octave}`, 45, y);
                     }
 
-                    canvasScreenshot = canvas.toDataURL('image/png');
+                    // Draw pitch history at fixed scale
+                    const history = practiceVisualizer.pitchHistory;
+                    if (history.length > 1) {
+                        const pointSpacing = 650 / practiceVisualizer.maxHistoryLength * practiceVisualizer.scanSpeed * practiceVisualizer.horizontalZoom;
+                        const totalWidth = history.length * pointSpacing;
+                        const scrollOffset = Math.max(0, totalWidth - 630);
+
+                        for (let i = 1; i < history.length; i++) {
+                            const prev = history[i - 1];
+                            const curr = history[i];
+                            if (!prev.frequency || !curr.frequency) continue;
+
+                            const x1 = 50 + (i - 1) * pointSpacing - scrollOffset;
+                            const x2 = 50 + i * pointSpacing - scrollOffset;
+
+                            // Convert frequency to Y at fixed 200px height
+                            const freqToY = (freq) => {
+                                const midiNote = 12 * Math.log2(freq / 440) + 69;
+                                return 200 - ((midiNote - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
+                            };
+
+                            const y1 = freqToY(prev.frequency);
+                            const y2 = freqToY(curr.frequency);
+
+                            const color = curr.color || practiceVisualizer.getNoteColor(curr.note);
+
+                            offCtx.strokeStyle = color;
+                            offCtx.lineWidth = 3;
+                            offCtx.lineCap = 'round';
+                            offCtx.shadowBlur = 10;
+                            offCtx.shadowColor = color;
+
+                            offCtx.beginPath();
+                            offCtx.moveTo(x1, y1);
+                            offCtx.lineTo(x2, y2);
+                            offCtx.stroke();
+
+                            offCtx.fillStyle = color;
+                            offCtx.beginPath();
+                            offCtx.arc(x2, y2, 2, 0, Math.PI * 2);
+                            offCtx.fill();
+                        }
+                        offCtx.shadowBlur = 0;
+                    }
+
+                    canvasScreenshot = offscreenCanvas.toDataURL('image/png');
                 } catch (e) {
                     console.warn('Failed to capture canvas screenshot:', e);
                 }
