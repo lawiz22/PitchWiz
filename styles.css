@@ -231,7 +231,8 @@ body {
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     padding: 12px 10px;
     /* Reduced from default */
-    display: flex;
+    display: none;
+    /* Hidden - reset button moved to Settings */
     flex-direction: column;
     gap: 12px;
     /* Reduced spacing between elements */

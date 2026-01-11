@@ -852,6 +852,18 @@ function init() {
     // Make createNewUser globally available
     window.createNewUser = createNewUser;
 
+    // Reset Practice Progress button in Settings
+    const resetProgressBtn = document.getElementById('resetProgressBtn');
+    if (resetProgressBtn) {
+        resetProgressBtn.addEventListener('click', () => {
+            if (typeof resetPracticeProgress === 'function') {
+                resetPracticeProgress();
+            } else {
+                console.error('resetPracticeProgress function not found');
+            }
+        });
+    }
+
     // Initial calls
     updateSingerGreeting();
     // populateProfileSelector(); // Moved to dbManager.init() callback
