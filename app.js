@@ -1336,16 +1336,29 @@ function handlePitchDetected(pitchData) {
     const openCalibrateBtn = document.getElementById('openCalibrateBtn');
     if (openCalibrateBtn) {
         openCalibrateBtn.addEventListener('click', () => {
+            console.log('[Settings] Calibrate button clicked');
+            console.log('[Settings] openRangeCalibration type:', typeof openRangeCalibration);
             if (typeof openRangeCalibration === 'function') {
+                console.log('[Settings] Calling openRangeCalibration...');
                 openRangeCalibration();
+            } else {
+                console.error('[Settings] openRangeCalibration is not a function!');
             }
         });
+    } else {
+        console.error('[Settings] openCalibrateBtn not found!');
     }
 
     // Create New User button in Settings
     const createNewUserBtn = document.getElementById('createNewUserBtn');
     if (createNewUserBtn) {
-        createNewUserBtn.addEventListener('click', createNewUser);
+        createNewUserBtn.addEventListener('click', () => {
+            console.log('[Settings] Create New User button clicked');
+            console.log('[Settings] createNewUser type:', typeof createNewUser);
+            createNewUser();
+        });
+    } else {
+        console.error('[Settings] createNewUserBtn not found!');
     }
 
     console.log('PitchWiz initialized successfully');

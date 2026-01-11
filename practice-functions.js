@@ -103,9 +103,14 @@ function openRangeCalibration() {
     document.getElementById('btnRecordHighest').disabled = true;
     document.getElementById('rangeResult').style.display = 'none';
 
+
     // Populate manual note selection dropdowns
     populateNoteDropdowns();
 }
+
+// Make openRangeCalibration globally available for Settings button
+window.openRangeCalibration = openRangeCalibration;
+
 
 function closeRangeCalibration() {
     const modal = document.getElementById('rangeCalibrationModal');

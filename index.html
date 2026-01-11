@@ -274,15 +274,9 @@
                 </div>
             </div>
 
+
             <!-- Practice Modes View -->
             <div id="practiceView" class="practice-view" style="display: none;">
-                <div class="practice-sidebar">
-                    <!-- Removed "Practice Modes" title to save space -->
-                    <button class="btn-reset-progress" id="resetProgressBtn" title="Reset all progress">
-                        🔄 Reset
-                    </button>
-                </div>
-
                 <!-- Exercise Cards -->
                 <div class="exercise-cards">
                     <div class="exercise-card">
@@ -597,13 +591,13 @@
                     <h3 class="section-title">Vocal Range Calibration</h3>
                     <div class="settings-grid">
                         <div class="setting-item">
-                            <button class="control-btn" id="openCalibrateBtn">
+                            <button class="control-btn" id="openCalibrateBtn" onclick="openRangeCalibration()">
                                 <span>🎵</span> Calibrate Range
                             </button>
                             <span class="setting-hint">Set your vocal range for practice exercises</span>
                         </div>
                         <div class="setting-item">
-                            <button class="control-btn" id="createNewUserBtn">
+                            <button class="control-btn" id="createNewUserBtn" onclick="createNewUser()">
                                 <span>👤</span> Create New User
                             </button>
                             <span class="setting-hint">Create a new singer profile with vocal range</span>
@@ -865,8 +859,8 @@
             <script src="tone-generator.js"></script>
             <script src="pitch-detector.js"></script>
             <script src="visualizer.js"></script>
-            <script src="app.js"></script>
             <script src="practice-functions.js"></script>
+            <script src="app.js"></script>
             <script src="interval-functions.js"></script>
             <script src="practice-integration.js"></script>
             <script src="export-import.js"></script>
