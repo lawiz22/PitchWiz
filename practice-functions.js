@@ -1076,7 +1076,8 @@ async function recordExerciseAttempt() {
                             const y1 = freqToY(prev.frequency);
                             const y2 = freqToY(curr.frequency);
 
-                            const color = curr.color || practiceVisualizer.getNoteColor(curr.note);
+                            // Use chromatic note color (not accuracy color from history)
+                            const color = practiceVisualizer.getNoteColor(curr.note);
 
                             offCtx.strokeStyle = color;
                             offCtx.lineWidth = 3;
