@@ -739,19 +739,24 @@ function selectExerciseNote(note) {
         if (scoreData && scoreData.screenshot) {
             // Load and display the saved screenshot
             const img = new Image();
+
+            // CRITICAL FIX: Set canvas dimensions BEFORE setting img.src
+            // Setting canvas.width/height clears the canvas, so do it first
+            canvas.width = 700;
+            canvas.height = 200;
+
+            // Fill background immediately while image loads
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             img.onload = function () {
-                // CRITICAL: Ensure canvas has correct internal dimensions
-                // CSS might have changed display size, but we need internal size to match
-                canvas.width = 700;
-                canvas.height = 200;
-
-                // Fill background first
-                ctx.fillStyle = '#1a1a2e';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Draw screenshot to fill entire canvas
-                // Both screenshot and canvas should be 700x200
+                // Canvas dimensions already set, just draw the image
+                // Draw screenshot to fill entire canvas, scaling if source differs
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.onerror = function () {
+                console.warn('Failed to load screenshot for note:', note);
+                // Keep the background fill already applied
             };
             img.src = scoreData.screenshot;
         } else {
