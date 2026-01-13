@@ -49,6 +49,10 @@ async function openPracticeView() {
 
         if (profile) {
             displayRangeSummary(profile);
+            // Update progress display when opening practice view
+            if (typeof updateDashboardProgress === 'function') {
+                setTimeout(() => updateDashboardProgress(), 100);
+            }
         } else {
             alert(`👋 Hi ${currentSinger}!\n\nLet's calibrate your vocal range.\n\nYou'll sing your lowest and highest comfortable notes.`);
             openRangeCalibration();
@@ -389,6 +393,9 @@ async function startIntuneExercise() {
                 headerInfo.textContent = `Singer: ${currentSinger || 'Guest'} • ${dateStr}`;
             }
 
+            // Inject styles BEFORE rendering grid (fixes layout glitch)
+            injectPuckGridStyles();
+
             renderNoteGrid(profile.range);
         }
     } catch (error) {
@@ -563,19 +570,25 @@ function updateDashboardProgress() {
 
         if (score >= 80) {
             puck.classList.add('completed');
-            // Ensure full opacity for mastered? Or keep scale?
-            // "100% will be 100%". So 80% is 0.8.
-            // But .completed adds glow.
             puck.style.boxShadow = `0 0 12px ${hexColor}`;
             puck.title = `${note}: ${score}% (Mastered)`;
         } else {
             puck.title = `${note}: ${score}%`;
         }
+
+        // Add hover event listeners for tooltip
+        puck.addEventListener('mouseenter', function () {
+            showNoteTooltip(this, note, scoreData);
+        });
+        puck.addEventListener('mouseleave', hideNoteTooltip);
+
         grid.appendChild(puck);
     });
 
-    // Render Accuracy Chart
-    renderAccuracyChart(scores);
+    // Render Accuracy Chart (if available)
+    if (typeof renderAccuracyChart === 'function') {
+        renderAccuracyChart(scores);
+    }
 }
 
 function hexToRgba(hex, alpha) {
@@ -684,6 +697,45 @@ function injectPuckGridStyles() {
             box-shadow: 0 0 15px currentColor;
             z-index: 10;
         }
+
+        /* Note Tooltip Styles */
+        .note-tooltip {
+            position: fixed;
+            z-index: 10000;
+            background: rgba(20, 20, 30, 0.95);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            pointer-events: none;
+            max-width: 400px;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .note-tooltip.show {
+            opacity: 1;
+        }
+        .tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        .tooltip-note {
+            font-weight: bold;
+            font-size: 16px;
+            color: #ffffff;
+        }
+        .tooltip-score {
+            font-size: 14px;
+            color: #4CAF50;
+        }
+        .tooltip-screenshot {
+            width: 100%;
+            max-width: 350px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
     `;
     document.head.appendChild(style);
 }
@@ -721,6 +773,12 @@ function renderNoteGrid(range) {
             btn.style.color = 'rgba(255,255,255,0.9)';
             btn.title = `${note}: ${score}%`;
         }
+
+        // Add hover event listeners for tooltip
+        btn.addEventListener('mouseenter', function () {
+            showNoteTooltip(this, note, scoreData);
+        });
+        btn.addEventListener('mouseleave', hideNoteTooltip);
 
         grid.appendChild(btn);
     });
@@ -963,7 +1021,12 @@ async function recordExerciseAttempt() {
         }
     } catch (e) { console.warn('Could not resume audio context', e); }
 
-    let countdown = 5;
+
+    // Load practice settings
+    const countInEnabled = localStorage.getItem('pitchWiz_practiceCountIn') !== 'false';
+    const recordDuration = parseInt(localStorage.getItem('pitchWiz_practiceRecordDuration') || '3');
+
+    let countdown = recordDuration;
     const targetFreq = exerciseState.currentFreq;
     const targetNote = exerciseState.currentNote;
     const recordedDiffs = []; // Array of cent differences
@@ -986,436 +1049,801 @@ async function recordExerciseAttempt() {
         practiceVisualizer.ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // RECORDING LOGIC
-    let mediaRecorder = null;
-    let audioChunks = [];
+    // COUNT-IN PHASE (if enabled)
+    const statusEl = document.getElementById('exerciseStatus');
+    const targetDisplay = document.getElementById('targetNoteDisplay');
 
-    try {
-        if (pitchDetector.microphone && pitchDetector.microphone.mediaStream) {
-            const stream = pitchDetector.microphone.mediaStream;
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = event => {
-                if (event.data.size > 0) audioChunks.push(event.data);
-            };
-            mediaRecorder.start();
-        }
-    } catch (e) {
-        console.warn('Recording failed to start:', e);
+    if (countInEnabled) {
+        let countInTime = 3;
+        statusEl.style.color = '#ffffff'; // White text for countdown
+        statusEl.textContent = countInTime.toString();
+
+        const countInInterval = setInterval(() => {
+            countInTime--;
+            if (countInTime > 0) {
+                statusEl.textContent = countInTime.toString();
+            } else {
+                clearInterval(countInInterval);
+                statusEl.style.color = ''; // Reset color
+                startRecording();
+            }
+        }, 1000);
+    } else {
+        startRecording();
     }
 
-    document.getElementById('exerciseStatus').textContent = `Sing! (${countdown}s)`;
-    const targetDisplay = document.getElementById('targetNoteDisplay');
-    targetDisplay.classList.add('recording-pulse');
+    function startRecording() {
+        // RECORDING LOGIC
+        let mediaRecorder = null;
+        let audioChunks = [];
 
-    const timer = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-            document.getElementById('exerciseStatus').textContent = `Sing! (${countdown}s)`;
-        } else {
-            clearInterval(timer);
-            targetDisplay.classList.remove('recording-pulse');
+        try {
+            if (pitchDetector.microphone && pitchDetector.microphone.mediaStream) {
+                const stream = pitchDetector.microphone.mediaStream;
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
+                mediaRecorder.start();
+            }
+        } catch (e) {
+            console.warn('Recording failed to start:', e);
+        }
 
-            // Capture canvas screenshot using OFFSCREEN canvas at fixed resolution
-            // This ensures consistent screenshot quality regardless of mobile CSS scaling
-            let canvasScreenshot = null;
-            if (practiceVisualizer && canvas) {
-                try {
-                    // Create offscreen canvas at fixed 700x200 resolution
-                    const offscreenCanvas = document.createElement('canvas');
-                    offscreenCanvas.width = 700;
-                    offscreenCanvas.height = 200;
-                    const offCtx = offscreenCanvas.getContext('2d');
+        statusEl.textContent = `Sing! (${countdown}s)`;
+        targetDisplay.classList.add('recording-pulse');
 
-                    // Fill background
-                    offCtx.fillStyle = practiceVisualizer.colors.background;
-                    offCtx.fillRect(0, 0, 700, 200);
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                document.getElementById('exerciseStatus').textContent = `Sing! (${countdown}s)`;
+            } else {
+                clearInterval(timer);
+                targetDisplay.classList.remove('recording-pulse');
 
-                    // Redraw pitch diagram at fixed resolution
-                    // Draw grid first
-                    offCtx.font = '11px Inter, sans-serif';
-                    offCtx.textAlign = 'right';
-                    offCtx.textBaseline = 'middle';
+                // Capture canvas screenshot using OFFSCREEN canvas at fixed resolution
+                // This ensures consistent screenshot quality regardless of mobile CSS scaling
+                let canvasScreenshot = null;
+                if (practiceVisualizer && canvas) {
+                    try {
+                        // Create offscreen canvas at fixed 700x200 resolution
+                        const offscreenCanvas = document.createElement('canvas');
+                        offscreenCanvas.width = 700;
+                        offscreenCanvas.height = 200;
+                        const offCtx = offscreenCanvas.getContext('2d');
 
-                    const noteColors = practiceVisualizer.noteColors;
-                    const noteNames = practiceVisualizer.noteNames;
+                        // Fill background
+                        offCtx.fillStyle = practiceVisualizer.colors.background;
+                        offCtx.fillRect(0, 0, 700, 200);
 
-                    for (let note = practiceVisualizer.minNote; note <= practiceVisualizer.maxNote; note++) {
-                        const y = 200 - ((note - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
-                        const noteName = noteNames[note % 12];
-                        const octave = Math.floor(note / 12) - 1;
+                        // Redraw pitch diagram at fixed resolution
+                        // Draw grid first
+                        offCtx.font = '11px Inter, sans-serif';
+                        offCtx.textAlign = 'right';
+                        offCtx.textBaseline = 'middle';
 
-                        // Grid line
-                        offCtx.strokeStyle = note % 12 === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)';
-                        offCtx.lineWidth = note % 12 === 0 ? 1 : 0.5;
-                        offCtx.beginPath();
-                        offCtx.moveTo(50, y);
-                        offCtx.lineTo(700, y);
-                        offCtx.stroke();
+                        const noteColors = practiceVisualizer.noteColors;
+                        const noteNames = practiceVisualizer.noteNames;
 
-                        // Note label
-                        offCtx.fillStyle = noteColors[note % 12];
-                        offCtx.fillText(`${noteName}${octave}`, 45, y);
-                    }
+                        for (let note = practiceVisualizer.minNote; note <= practiceVisualizer.maxNote; note++) {
+                            const y = 200 - ((note - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
+                            const noteName = noteNames[note % 12];
+                            const octave = Math.floor(note / 12) - 1;
 
-                    // Draw pitch history at fixed scale
-                    const history = practiceVisualizer.pitchHistory;
-                    if (history.length > 1) {
-                        const pointSpacing = 650 / practiceVisualizer.maxHistoryLength * practiceVisualizer.scanSpeed * practiceVisualizer.horizontalZoom;
-                        const totalWidth = history.length * pointSpacing;
-                        const scrollOffset = Math.max(0, totalWidth - 630);
-
-                        for (let i = 1; i < history.length; i++) {
-                            const prev = history[i - 1];
-                            const curr = history[i];
-                            if (!prev.frequency || !curr.frequency) continue;
-
-                            const x1 = 50 + (i - 1) * pointSpacing - scrollOffset;
-                            const x2 = 50 + i * pointSpacing - scrollOffset;
-
-                            // Convert frequency to Y at fixed 200px height
-                            const freqToY = (freq) => {
-                                const midiNote = 12 * Math.log2(freq / 440) + 69;
-                                return 200 - ((midiNote - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
-                            };
-
-                            const y1 = freqToY(prev.frequency);
-                            const y2 = freqToY(curr.frequency);
-
-                            // Use chromatic note color (not accuracy color from history)
-                            const color = practiceVisualizer.getNoteColor(curr.note);
-
-                            offCtx.strokeStyle = color;
-                            offCtx.lineWidth = 3;
-                            offCtx.lineCap = 'round';
-                            offCtx.shadowBlur = 10;
-                            offCtx.shadowColor = color;
-
+                            // Grid line
+                            offCtx.strokeStyle = note % 12 === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)';
+                            offCtx.lineWidth = note % 12 === 0 ? 1 : 0.5;
                             offCtx.beginPath();
-                            offCtx.moveTo(x1, y1);
-                            offCtx.lineTo(x2, y2);
+                            offCtx.moveTo(50, y);
+                            offCtx.lineTo(700, y);
                             offCtx.stroke();
 
-                            offCtx.fillStyle = color;
-                            offCtx.beginPath();
-                            offCtx.arc(x2, y2, 2, 0, Math.PI * 2);
-                            offCtx.fill();
+                            // Note label
+                            offCtx.fillStyle = noteColors[note % 12];
+                            offCtx.fillText(`${noteName}${octave}`, 45, y);
                         }
-                        offCtx.shadowBlur = 0;
-                    }
 
-                    canvasScreenshot = offscreenCanvas.toDataURL('image/png');
-                } catch (e) {
-                    console.warn('Failed to capture canvas screenshot:', e);
+                        // Draw pitch history at fixed scale
+                        const history = practiceVisualizer.pitchHistory;
+                        if (history.length > 1) {
+                            const pointSpacing = 650 / practiceVisualizer.maxHistoryLength * practiceVisualizer.scanSpeed * practiceVisualizer.horizontalZoom;
+                            const totalWidth = history.length * pointSpacing;
+                            const scrollOffset = Math.max(0, totalWidth - 630);
+
+                            for (let i = 1; i < history.length; i++) {
+                                const prev = history[i - 1];
+                                const curr = history[i];
+                                if (!prev.frequency || !curr.frequency) continue;
+
+                                const x1 = 50 + (i - 1) * pointSpacing - scrollOffset;
+                                const x2 = 50 + i * pointSpacing - scrollOffset;
+
+                                // Convert frequency to Y at fixed 200px height
+                                const freqToY = (freq) => {
+                                    const midiNote = 12 * Math.log2(freq / 440) + 69;
+                                    return 200 - ((midiNote - practiceVisualizer.minNote) / practiceVisualizer.noteRange) * 200;
+                                };
+
+                                const y1 = freqToY(prev.frequency);
+                                const y2 = freqToY(curr.frequency);
+
+                                // Use chromatic note color (not accuracy color from history)
+                                const color = practiceVisualizer.getNoteColor(curr.note);
+
+                                offCtx.strokeStyle = color;
+                                offCtx.lineWidth = 3;
+                                offCtx.lineCap = 'round';
+                                offCtx.shadowBlur = 10;
+                                offCtx.shadowColor = color;
+
+                                offCtx.beginPath();
+                                offCtx.moveTo(x1, y1);
+                                offCtx.lineTo(x2, y2);
+                                offCtx.stroke();
+
+                                offCtx.fillStyle = color;
+                                offCtx.beginPath();
+                                offCtx.arc(x2, y2, 2, 0, Math.PI * 2);
+                                offCtx.fill();
+                            }
+                            offCtx.shadowBlur = 0;
+                        }
+
+                        canvasScreenshot = offscreenCanvas.toDataURL('image/png');
+                    } catch (e) {
+                        console.warn('Failed to capture canvas screenshot:', e);
+                    }
+                }
+
+                // Stop recorder and finish
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        // Pass blob, pitchData, and screenshot to finish function
+                        finishExerciseAttempt(recordedDiffs, btn, audioBlob, recordedPitchData, canvasScreenshot);
+                    };
+                } else {
+                    finishExerciseAttempt(recordedDiffs, btn, null, [], canvasScreenshot);
                 }
             }
+        }, 1000);
 
-            // Stop recorder and finish
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    // Pass blob, pitchData, and screenshot to finish function
-                    finishExerciseAttempt(recordedDiffs, btn, audioBlob, recordedPitchData, canvasScreenshot);
-                };
-            } else {
-                finishExerciseAttempt(recordedDiffs, btn, null, [], canvasScreenshot);
+        // Collect data frequently
+        const startTime = Date.now();
+        const recordedPitchData = [];
+
+        const dataTimer = setInterval(() => {
+            if (countdown <= 0) {
+                clearInterval(dataTimer);
+                return;
             }
+
+            // Use exposed data or callback approach
+            const data = pitchDetector.lastPitchData;
+
+            if (data && data.frequency) {
+                // Capture for playback visualizer
+                recordedPitchData.push({
+                    timestamp: Date.now() - startTime,
+                    frequency: data.frequency,
+                    note: data.note,
+                    confidence: 0.9
+                });
+
+                // Update practice visualizer in real-time
+                if (practiceVisualizer) {
+                    const centsDiff = 1200 * Math.log2(data.frequency / targetFreq);
+                    const color = getAccuracyColor(Math.abs(centsDiff));
+
+                    practiceVisualizer.pitchHistory.push({
+                        frequency: data.frequency,
+                        note: data.note,
+                        color: color
+                    });
+
+                    // Keep history manageable
+                    if (practiceVisualizer.pitchHistory.length > practiceVisualizer.maxHistoryLength) {
+                        practiceVisualizer.pitchHistory.shift();
+                    }
+
+                    // Render the visualization
+                    practiceVisualizer.drawPitchDiagram();
+                }
+
+                // Calculate cents difference manually for accuracy
+                // 1200 * log2(f1 / f2)
+                const centsDiff = 1200 * Math.log2(data.frequency / targetFreq);
+
+                // Relaxed range to 200 cents (2 semitones) to catch more user attempts
+                if (Math.abs(centsDiff) < 200) {
+                    recordedDiffs.push(Math.abs(centsDiff));
+                }
+            }
+        }, 15); // ~60fps for smoother playback visualization
+    } // End of startRecording function
+
+
+    // Helper function to convert note name to MIDI number
+    function noteToMidi(noteName) {
+        const noteMap = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
+        const match = noteName.match(/^([A-G]#?)(\d+)$/);
+        if (!match) return 60; // Default to C4
+        const note = match[1];
+        const octave = parseInt(match[2]);
+        return (octave + 1) * 12 + noteMap[note];
+    }
+
+    // Helper function to get color based on accuracy
+    function getAccuracyColor(centsDiff) {
+        if (centsDiff < 10) return '#4CAF50'; // Green - on pitch
+        if (centsDiff < 25) return '#FFC107'; // Yellow - close
+        if (centsDiff < 50) return '#FF9800'; // Orange - off
+        return '#F44336'; // Red - very off
+    }
+
+
+    async function finishExerciseAttempt(diffs, btn, audioBlob, pitchData = [], canvasScreenshot = null) {
+        document.getElementById('targetNoteDisplay').classList.remove('recording-pulse');
+        document.getElementById('btnPlayTone').disabled = false;
+        btn.disabled = false;
+        document.getElementById('btnNextNote').disabled = false;
+
+        // Calculate Score
+        let score = 0;
+        let feedback = "Try Again";
+        let color = "#EF4444"; // Red
+
+        if (diffs.length > 10) { // Require at least some samples
+            // GLIDE ELIMINATION: Ignore the first 30% of the attempt to account for "scoops"
+            // At 60fps, 1 second is ~60 samples.
+            const samplesToTrim = Math.min(Math.floor(diffs.length * 0.3), 60);
+            const validDiffs = diffs.slice(samplesToTrim);
+
+            if (validDiffs.length === 0) {
+                // Should not happen unless length was small, fallback to all
+                const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                score = Math.max(0, Math.round(100 - (avgDiff * 2)));
+            } else {
+                const avgDiff = validDiffs.reduce((a, b) => a + b, 0) / validDiffs.length;
+
+                // Refined Scoring: Allow 5 cents margin of error for perfect score
+                // Then penalize 2 points per cent deviation
+                score = Math.max(0, Math.round(100 - (Math.max(0, avgDiff - 5) * 2)));
+            }
+
+            if (score >= 90) { feedback = "Perfect!"; color = "#10B981"; }
+            else if (score >= 70) { feedback = "Good!"; color = "#3B82F6"; }
+            else if (score >= 50) { feedback = "Okay"; color = "#F59E0B"; }
+        } else {
+            feedback = "No pitch detected";
         }
-    }, 1000);
 
-    // Collect data frequently
-    const startTime = Date.now();
-    const recordedPitchData = [];
+        // MANUAL SAVE SETUP
+        exerciseState.lastRecording = null;
 
-    const dataTimer = setInterval(() => {
-        if (countdown <= 0) {
-            clearInterval(dataTimer);
+        const saveBtn = document.getElementById('btnSaveResult');
+        if (audioBlob) {
+            console.log('[Practice] Audio blob captured:', audioBlob.size);
+            exerciseState.lastRecording = {
+                blob: audioBlob,
+                score: score,
+                targetNote: exerciseState.currentNote,
+                targetFreq: exerciseState.currentFreq,
+                pitchData: pitchData
+            };
+
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Save to Library';
+                // saveBtn.onclick = saveLastRecordingToLibrary; // Assuming global or add here
+                // Better to add onclick in HTML or here:
+                saveBtn.onclick = () => saveLastRecordingToLibrary();
+            }
+        } else {
+            console.warn('[Practice] No audio blob captured');
+            if (saveBtn) saveBtn.style.display = 'none';
+        }
+
+        // Display Result
+        // Ensure element exists (it's in the modal)
+        const resultDiv = document.getElementById('exerciseResult');
+        if (resultDiv) {
+            resultDiv.style.display = 'block';
+
+            const scoreVal = document.getElementById('scoreValue');
+            if (scoreVal) scoreVal.textContent = `${score}%`;
+
+            const scoreFeed = document.getElementById('scoreFeedback');
+            if (scoreFeed) scoreFeed.textContent = feedback;
+
+            const scoreCircle = document.querySelector('.score-circle');
+            if (scoreCircle) scoreCircle.style.borderColor = color;
+
+            const scoreSpan = document.querySelector('.score-circle span');
+            if (scoreSpan) scoreSpan.style.color = color;
+        }
+
+        document.getElementById('exerciseStatus').textContent = `Result: ${score}% Accuracy`;
+
+        // Save score and screenshot
+        exerciseState.scores[exerciseState.currentNote] = {
+            score: score,
+            screenshot: canvasScreenshot,
+            timestamp: Date.now()
+        };
+
+        // PERSIST SCORES
+        if (typeof currentSinger !== 'undefined' && currentSinger) {
+            try {
+                localStorage.setItem(`pitchWiz_scores_${currentSinger}`, JSON.stringify(exerciseState.scores));
+
+                // Force update summary if visible (optional, but good for real-time feedback if dashboard is behind modal)
+                // displayRangeSummary(currentProfile?); 
+            } catch (e) { console.warn("Failed to persist scores", e); }
+        }
+
+        // Mark as completed in grid if good score
+        if (score >= 80) {
+            // Find button by text
+            const gridBtns = document.querySelectorAll('.note-btn');
+            gridBtns.forEach(b => {
+                if (b.textContent === exerciseState.currentNote) {
+                    b.classList.add('completed');
+                    // Ensure color
+                    const noteName = exerciseState.currentNote.match(/[A-G]#?/)[0];
+                    const colorVar = `--note-${noteName.replace('#', 's').toLowerCase()}`;
+                    b.style.backgroundColor = `var(${colorVar})`;
+                    b.style.color = '#fff';
+                }
+            });
+        }
+
+        // Update dashboard grid for ALL completed notes (not just high scores)
+        if (typeof updateDashboardProgress === 'function') {
+            updateDashboardProgress();
+        }
+    }
+
+    function selectPrevNote() {
+        const btns = Array.from(document.querySelectorAll('.note-btn'));
+        const currentIndex = btns.findIndex(b => b.textContent === exerciseState.currentNote);
+
+        if (currentIndex > 0) {
+            selectExerciseNote(btns[currentIndex - 1].textContent);
+            btns[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function selectNextNote() {
+        const btns = Array.from(document.querySelectorAll('.note-btn'));
+        const currentIndex = btns.findIndex(b => b.textContent === exerciseState.currentNote);
+
+        if (currentIndex >= 0 && currentIndex < btns.length - 1) {
+            selectExerciseNote(btns[currentIndex + 1].textContent);
+
+            // Scroll to button
+            btns[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            alert('Exercise complete! Great job!');
+        }
+    }
+
+    function changeSingerName() {
+        const newName = prompt('Enter your name:', localStorage.getItem('pitchWizSinger') || '');
+
+        if (newName && newName.trim() !== '') {
+            localStorage.setItem('pitchWizSinger', newName.trim());
+            currentSinger = newName.trim();
+
+            const singerInput = document.getElementById('singerName');
+            if (singerInput) {
+                singerInput.value = currentSinger;
+            }
+
+            alert(`✅ Singer name updated to: ${currentSinger}`);
+        }
+    }
+    // ===== NEW SAVE/RESET FUNCTIONS =====
+
+    async function saveLastRecordingToLibrary() {
+        if (!exerciseState.lastRecording || !exerciseState.lastRecording.blob) {
+            alert('No recording available to save.');
             return;
         }
 
-        // Use exposed data or callback approach
-        const data = pitchDetector.lastPitchData;
+        const rec = exerciseState.lastRecording;
+        const saveBtn = document.getElementById('btnSaveResult');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+        }
 
-        if (data && data.frequency) {
-            // Capture for playback visualizer
-            recordedPitchData.push({
-                timestamp: Date.now() - startTime,
-                frequency: data.frequency,
-                note: data.note,
-                confidence: 0.9
+        if (!window.dbManager) {
+            alert('Database functionality missing. Check console.');
+            if (saveBtn) saveBtn.disabled = false;
+            return;
+        }
+
+        try {
+            const singerName = localStorage.getItem('pitchWizSinger') || 'Guest';
+            await window.dbManager.saveRecording({
+                date: new Date().toISOString(),
+                duration: 5,
+                mode: 'practice',
+                name: `Practice: ${rec.targetNote}`,
+                singer: singerName,
+                category: 'intune-exercise',
+                metrics: { accuracy: rec.score, note: rec.targetNote },
+                audioBlob: rec.blob,
+                metadata: {
+                    targetNote: rec.targetNote,
+                    targetFreq: rec.targetFreq,
+                    score: rec.score
+                },
+                pitchData: rec.pitchData // Save pitch data for visualizer
             });
 
-            // Update practice visualizer in real-time
-            if (practiceVisualizer) {
-                const centsDiff = 1200 * Math.log2(data.frequency / targetFreq);
-                const color = getAccuracyColor(Math.abs(centsDiff));
+            if (saveBtn) {
+                saveBtn.textContent = '✅ Saved!';
+            }
+            console.log('Manually saved recording to library');
 
-                practiceVisualizer.pitchHistory.push({
-                    frequency: data.frequency,
-                    note: data.note,
-                    color: color
+            // Try to update library UI if present
+            if (typeof renderLibrary === 'function') renderLibrary();
+
+        } catch (e) {
+            console.error('Manual save failed:', e);
+            alert('Failed to save: ' + e.message);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Save to Library';
+            }
+        }
+    }
+
+    function resetPracticeProgress() {
+        const singer = localStorage.getItem('pitchWizSinger');
+        if (!singer) {
+            alert('No active singer profile found.');
+            return;
+        }
+
+        if (!confirm(`⚠️ RESET PROGRESS\n\nAre you sure you want to reset all saved scores for "${singer}"?\nThis cannot be undone.`)) {
+            return;
+        }
+
+        // Clear scores
+        exerciseState.scores = {};
+        localStorage.removeItem(`pitchWiz_scores_${singer}`);
+
+        // Update UI
+        const el = document.getElementById('intuneCompleted');
+        if (el) el.textContent = '0';
+
+        const bar = document.getElementById('intuneProgress');
+        if (bar) bar.style.width = '0%';
+
+        document.querySelectorAll('.note-btn.completed').forEach(btn => {
+            btn.classList.remove('completed');
+            btn.style.backgroundColor = '';
+            btn.style.boxShadow = '';
+            btn.style.opacity = '0.7';
+            // restore original color logic if needed, but remove completed class handles most
+        });
+
+        alert('✅ Progress has been reset.');
+
+        // Refresh modal if open
+        closeIntuneExercise();
+        // Re-open? Or just leave closed.
+    }
+
+    // Make resetPracticeProgress globally available for Settings button
+    window.resetPracticeProgress = resetPracticeProgress;
+
+    // Initialize dashboard progress on load
+    document.addEventListener('DOMContentLoaded', () => {
+        // Allow time for DOM to settle
+        setTimeout(() => {
+            if (typeof updateDashboardProgress === 'function') {
+                updateDashboardProgress();
+            }
+            // Update header profile name
+            updateHeaderProfileName();
+        }, 500);
+
+        // Profile button event listener
+        const profileBtn = document.getElementById('profileBtn');
+        if (profileBtn) {
+            profileBtn.addEventListener('click', openProfileModal);
+        }
+
+        // Profile modal close button
+        const closeProfileModal = document.getElementById('closeProfileModal');
+        if (closeProfileModal) {
+            closeProfileModal.addEventListener('click', closeProfileModalFunc);
+        }
+
+        // Calibration button in profile modal
+        const openCalibrationBtn = document.getElementById('openCalibrationBtn');
+        if (openCalibrationBtn) {
+            openCalibrationBtn.addEventListener('click', () => {
+                closeProfileModalFunc();
+                openRangeCalibration();
+            });
+        }
+
+        // Singer dropdown for selecting existing profiles
+        const singerListSelect = document.getElementById('singerListSelect');
+        if (singerListSelect) {
+            singerListSelect.addEventListener('change', (e) => {
+                const selectedSinger = e.target.value;
+                if (selectedSinger) {
+                    switchSinger(selectedSinger);
+                }
+            });
+        }
+
+        // Create new profile button
+        const createProfileBtn = document.getElementById('createProfileBtn');
+        if (createProfileBtn) {
+            createProfileBtn.addEventListener('click', () => {
+                const profileSingerInput = document.getElementById('profileSingerInput');
+                const newSinger = profileSingerInput.value.trim();
+                if (newSinger) {
+                    switchSinger(newSinger);
+                    profileSingerInput.value = '';
+                } else {
+                    alert('Please enter a singer name.');
+                }
+            });
+        }
+
+        // Singer input for switching/creating profiles (Enter key)
+        const profileSingerInput = document.getElementById('profileSingerInput');
+        if (profileSingerInput) {
+            profileSingerInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const newSinger = profileSingerInput.value.trim();
+                    if (newSinger) {
+                        switchSinger(newSinger);
+                        profileSingerInput.value = '';
+                    }
+                }
+            });
+        }
+    });
+
+    // Update header profile name
+    function updateHeaderProfileName() {
+        const headerName = document.getElementById('headerProfileName');
+        if (headerName) {
+            const singer = localStorage.getItem('pitchWizSinger') || currentSinger || 'Guest';
+            headerName.textContent = singer;
+            headerName.style.display = 'inline';
+        }
+        // Element removed from header - profile now in settings page
+    }
+
+    // Open Profile Modal
+    async function openProfileModal() {
+        const modal = document.getElementById('profileModal');
+        const currentNameEl = document.getElementById('currentProfileName');
+        const statusEl = document.getElementById('profileCalibrationStatus');
+        const singerSelect = document.getElementById('singerListSelect');
+
+        if (!modal) return;
+
+        // Get current singer
+        const singer = localStorage.getItem('pitchWizSinger') || 'Guest';
+        if (currentNameEl) {
+            currentNameEl.textContent = singer;
+        }
+
+        // Check calibration status
+        const rangeData = localStorage.getItem('pitchWizRange');
+        if (statusEl) {
+            if (rangeData) {
+                try {
+                    const range = JSON.parse(rangeData);
+                    statusEl.textContent = `✓ ${range.min} - ${range.max}`;
+                    statusEl.className = 'status-badge calibrated';
+                } catch (e) {
+                    statusEl.textContent = 'Not Calibrated';
+                    statusEl.className = 'status-badge';
+                }
+            } else {
+                statusEl.textContent = 'Not Calibrated';
+                statusEl.className = 'status-badge';
+            }
+        }
+
+        // Populate singer list from recordings
+        if (singerSelect && typeof dbManager !== 'undefined') {
+            try {
+                const recordings = await dbManager.getAllRecordings();
+
+
+                const singers = [...new Set(recordings.map(r => r.singer).filter(Boolean))].sort();
+
+
+                // Clear and repopulate
+                singerSelect.innerHTML = '<option value="">-- Select a singer --</option>';
+                singers.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = s;
+                    option.textContent = s;
+                    if (s === singer) option.selected = true;
+                    singerSelect.appendChild(option);
                 });
+            } catch (e) {
+                console.error('Error loading singers:', e);
+            }
+        }
 
-                // Keep history manageable
-                if (practiceVisualizer.pitchHistory.length > practiceVisualizer.maxHistoryLength) {
-                    practiceVisualizer.pitchHistory.shift();
+        modal.style.display = 'flex';
+    }
+
+    // Close Profile Modal
+    function closeProfileModalFunc() {
+        const modal = document.getElementById('profileModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Switch Singer Profile
+    async function switchSinger(newSingerName) {
+        if (!newSingerName || newSingerName.trim() === '') {
+            alert('Please enter a valid singer name.');
+            return;
+        }
+
+        const previousSinger = localStorage.getItem('pitchWizSinger');
+
+        // Update current singer
+        localStorage.setItem('pitchWizSinger', newSingerName);
+        currentSinger = newSingerName;
+
+        console.log(`Switched profile from "${previousSinger}" to "${newSingerName}"`);
+
+        // Update header
+        updateHeaderProfileName();
+
+        // Load profile data
+        if (typeof dbManager !== 'undefined') {
+            const profile = await dbManager.getSingerProfile(newSingerName);
+            if (profile) {
+                // Update cached range
+                if (profile.lowestNote && profile.highestNote) {
+                    localStorage.setItem('pitchWizRange', JSON.stringify({
+                        min: profile.lowestNote,
+                        max: profile.highestNote
+                    }));
                 }
 
-                // Render the visualization
-                practiceVisualizer.drawPitchDiagram();
-            }
-
-            // Calculate cents difference manually for accuracy
-            // 1200 * log2(f1 / f2)
-            const centsDiff = 1200 * Math.log2(data.frequency / targetFreq);
-
-            // Relaxed range to 200 cents (2 semitones) to catch more user attempts
-            if (Math.abs(centsDiff) < 200) {
-                recordedDiffs.push(Math.abs(centsDiff));
+                // Update practice view if visible
+                if (typeof displayRangeSummary === 'function') {
+                    displayRangeSummary(profile);
+                }
+            } else {
+                // New profile - clear range
+                localStorage.removeItem('pitchWizRange');
             }
         }
-    }, 15); // ~60fps for smoother playback visualization
-}
 
-// Helper function to convert note name to MIDI number
-function noteToMidi(noteName) {
-    const noteMap = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
-    const match = noteName.match(/^([A-G]#?)(\d+)$/);
-    if (!match) return 60; // Default to C4
-    const note = match[1];
-    const octave = parseInt(match[2]);
-    return (octave + 1) * 12 + noteMap[note];
-}
-
-// Helper function to get color based on accuracy
-function getAccuracyColor(centsDiff) {
-    if (centsDiff < 10) return '#4CAF50'; // Green - on pitch
-    if (centsDiff < 25) return '#FFC107'; // Yellow - close
-    if (centsDiff < 50) return '#FF9800'; // Orange - off
-    return '#F44336'; // Red - very off
-}
-
-
-async function finishExerciseAttempt(diffs, btn, audioBlob, pitchData = [], canvasScreenshot = null) {
-    document.getElementById('targetNoteDisplay').classList.remove('recording-pulse');
-    document.getElementById('btnPlayTone').disabled = false;
-    btn.disabled = false;
-    document.getElementById('btnNextNote').disabled = false;
-
-    // Calculate Score
-    let score = 0;
-    let feedback = "Try Again";
-    let color = "#EF4444"; // Red
-
-    if (diffs.length > 10) { // Require at least some samples
-        // GLIDE ELIMINATION: Ignore the first 30% of the attempt to account for "scoops"
-        // At 60fps, 1 second is ~60 samples.
-        const samplesToTrim = Math.min(Math.floor(diffs.length * 0.3), 60);
-        const validDiffs = diffs.slice(samplesToTrim);
-
-        if (validDiffs.length === 0) {
-            // Should not happen unless length was small, fallback to all
-            const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-            score = Math.max(0, Math.round(100 - (avgDiff * 2)));
-        } else {
-            const avgDiff = validDiffs.reduce((a, b) => a + b, 0) / validDiffs.length;
-
-            // Refined Scoring: Allow 5 cents margin of error for perfect score
-            // Then penalize 2 points per cent deviation
-            score = Math.max(0, Math.round(100 - (Math.max(0, avgDiff - 5) * 2)));
+        // Reload dashboard and practice UI
+        if (typeof updateDashboardProgress === 'function') {
+            updateDashboardProgress();
         }
 
-        if (score >= 90) { feedback = "Perfect!"; color = "#10B981"; }
-        else if (score >= 70) { feedback = "Good!"; color = "#3B82F6"; }
-        else if (score >= 50) { feedback = "Okay"; color = "#F59E0B"; }
-    } else {
-        feedback = "No pitch detected";
+        // Close modal
+        closeProfileModalFunc();
+
+        alert(`✓ Switched to profile: ${newSingerName}`);
+
+        // Clear the input
+        const input = document.getElementById('profileSingerInput');
+        if (input) input.value = '';
     }
 
-    // MANUAL SAVE SETUP
-    exerciseState.lastRecording = null;
+    let accuracyNoteChartInstance = null;
 
-    const saveBtn = document.getElementById('btnSaveResult');
-    if (audioBlob) {
-        console.log('[Practice] Audio blob captured:', audioBlob.size);
-        exerciseState.lastRecording = {
-            blob: audioBlob,
-            score: score,
-            targetNote: exerciseState.currentNote,
-            targetFreq: exerciseState.currentFreq,
-            pitchData: pitchData
-        };
+    function renderAccuracyChart(scores) {
+        const ctx = document.getElementById('accuracyPerNoteChart');
+        if (!ctx) return;
 
-        if (saveBtn) {
-            saveBtn.style.display = 'block';
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Save to Library';
-            // saveBtn.onclick = saveLastRecordingToLibrary; // Assuming global or add here
-            // Better to add onclick in HTML or here:
-            saveBtn.onclick = () => saveLastRecordingToLibrary();
-        }
-    } else {
-        console.warn('[Practice] No audio blob captured');
-        if (saveBtn) saveBtn.style.display = 'none';
-    }
-
-    // Display Result
-    // Ensure element exists (it's in the modal)
-    const resultDiv = document.getElementById('exerciseResult');
-    if (resultDiv) {
-        resultDiv.style.display = 'block';
-
-        const scoreVal = document.getElementById('scoreValue');
-        if (scoreVal) scoreVal.textContent = `${score}%`;
-
-        const scoreFeed = document.getElementById('scoreFeedback');
-        if (scoreFeed) scoreFeed.textContent = feedback;
-
-        const scoreCircle = document.querySelector('.score-circle');
-        if (scoreCircle) scoreCircle.style.borderColor = color;
-
-        const scoreSpan = document.querySelector('.score-circle span');
-        if (scoreSpan) scoreSpan.style.color = color;
-    }
-
-    document.getElementById('exerciseStatus').textContent = `Result: ${score}% Accuracy`;
-
-    // Save score and screenshot
-    exerciseState.scores[exerciseState.currentNote] = {
-        score: score,
-        screenshot: canvasScreenshot,
-        timestamp: Date.now()
-    };
-
-    // PERSIST SCORES
-    if (typeof currentSinger !== 'undefined' && currentSinger) {
-        try {
-            localStorage.setItem(`pitchWiz_scores_${currentSinger}`, JSON.stringify(exerciseState.scores));
-
-            // Force update summary if visible (optional, but good for real-time feedback if dashboard is behind modal)
-            // displayRangeSummary(currentProfile?); 
-        } catch (e) { console.warn("Failed to persist scores", e); }
-    }
-
-    // Mark as completed in grid if good score
-    if (score >= 80) {
-        // Find button by text
-        const gridBtns = document.querySelectorAll('.note-btn');
-        gridBtns.forEach(b => {
-            if (b.textContent === exerciseState.currentNote) {
-                b.classList.add('completed');
-                // Ensure color
-                const noteName = exerciseState.currentNote.match(/[A-G]#?/)[0];
-                const colorVar = `--note-${noteName.replace('#', 's').toLowerCase()}`;
-                b.style.backgroundColor = `var(${colorVar})`;
-                b.style.color = '#fff';
-            }
+        // Filter notes that have actual scores
+        const notes = Object.keys(scores).filter(n => {
+            const val = scores[n];
+            const score = (typeof val === 'object' && val !== null) ? val.score : val;
+            return score !== undefined && score !== null;
+        }).sort((a, b) => {
+            const parseNote = (n) => {
+                const match = n.match(/([A-G]#?)(\d)/);
+                if (!match) return 0;
+                const semi = "C C# D D# E F F# G G# A A# B".split(' ').indexOf(match[1]);
+                const octave = parseInt(match[2]);
+                return octave * 12 + semi;
+            };
+            return parseNote(a) - parseNote(b);
         });
-    }
 
-    // Update dashboard grid for ALL completed notes (not just high scores)
-    if (typeof updateDashboardProgress === 'function') {
-        updateDashboardProgress();
-    }
-}
-
-function selectPrevNote() {
-    const btns = Array.from(document.querySelectorAll('.note-btn'));
-    const currentIndex = btns.findIndex(b => b.textContent === exerciseState.currentNote);
-
-    if (currentIndex > 0) {
-        selectExerciseNote(btns[currentIndex - 1].textContent);
-        btns[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
-function selectNextNote() {
-    const btns = Array.from(document.querySelectorAll('.note-btn'));
-    const currentIndex = btns.findIndex(b => b.textContent === exerciseState.currentNote);
-
-    if (currentIndex >= 0 && currentIndex < btns.length - 1) {
-        selectExerciseNote(btns[currentIndex + 1].textContent);
-
-        // Scroll to button
-        btns[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-        alert('Exercise complete! Great job!');
-    }
-}
-
-function changeSingerName() {
-    const newName = prompt('Enter your name:', localStorage.getItem('pitchWizSinger') || '');
-
-    if (newName && newName.trim() !== '') {
-        localStorage.setItem('pitchWizSinger', newName.trim());
-        currentSinger = newName.trim();
-
-        const singerInput = document.getElementById('singerName');
-        if (singerInput) {
-            singerInput.value = currentSinger;
+        if (notes.length === 0) {
+            if (accuracyNoteChartInstance) {
+                accuracyNoteChartInstance.destroy();
+                accuracyNoteChartInstance = null;
+            }
+            return;
         }
 
-        alert(`✅ Singer name updated to: ${currentSinger}`);
-    }
-}
-// ===== NEW SAVE/RESET FUNCTIONS =====
+        const dataValues = notes.map(n => {
+            const val = scores[n];
+            return (typeof val === 'object' && val !== null) ? val.score : val;
+        });
 
-async function saveLastRecordingToLibrary() {
-    if (!exerciseState.lastRecording || !exerciseState.lastRecording.blob) {
-        alert('No recording available to save.');
-        return;
-    }
+        const backgroundColors = notes.map(n => {
+            const noteName = n.match(/[A-G]#?/)[0];
+            return NOTE_COLORS[noteName] || '#999';
+        });
 
-    const rec = exerciseState.lastRecording;
-    const saveBtn = document.getElementById('btnSaveResult');
-    if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving...';
-    }
+        // Border colors (slightly lighter/darker)
+        const borderColors = notes.map(n => {
+            return '#ffffff';
+        });
 
-    if (!window.dbManager) {
-        alert('Database functionality missing. Check console.');
-        if (saveBtn) saveBtn.disabled = false;
-        return;
-    }
+        if (accuracyNoteChartInstance) {
+            accuracyNoteChartInstance.destroy();
+        }
 
-    try {
-        const singerName = localStorage.getItem('pitchWizSinger') || 'Guest';
-        await window.dbManager.saveRecording({
-            date: new Date().toISOString(),
-            duration: 5,
-            mode: 'practice',
-            name: `Practice: ${rec.targetNote}`,
-            singer: singerName,
-            category: 'intune-exercise',
-            metrics: { accuracy: rec.score, note: rec.targetNote },
-            audioBlob: rec.blob,
-            metadata: {
-                targetNote: rec.targetNote,
-                targetFreq: rec.targetFreq,
-                score: rec.score
+        if (typeof Chart === 'undefined') return;
+
+        accuracyNoteChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: notes,
+                datasets: [{
+                    label: 'Accuracy (%)',
+                    data: dataValues,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    barPercentage: 0.8
+                }]
             },
-            pitchData: rec.pitchData // Save pitch data for visualizer
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#a0a0a0' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a0a0a0' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `Accuracy: ${context.parsed.y}%`;
+                            }
+                        }
+                    }
+                }
+            }
         });
-
-        if (saveBtn) {
-            saveBtn.textContent = '✅ Saved!';
-        }
-        console.log('Manually saved recording to library');
-
-        // Try to update library UI if present
-        if (typeof renderLibrary === 'function') renderLibrary();
-
-    } catch (e) {
-        console.error('Manual save failed:', e);
-        alert('Failed to save: ' + e.message);
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Save to Library';
-        }
     }
-}
+} // Missing closing brace for parent function/scope
 
+// Reset Practice Progress function
 function resetPracticeProgress() {
     const singer = localStorage.getItem('pitchWizSinger');
     if (!singer) {
@@ -1443,224 +1871,21 @@ function resetPracticeProgress() {
         btn.style.backgroundColor = '';
         btn.style.boxShadow = '';
         btn.style.opacity = '0.7';
-        // restore original color logic if needed, but remove completed class handles most
     });
 
     alert('✅ Progress has been reset.');
 
     // Refresh modal if open
     closeIntuneExercise();
-    // Re-open? Or just leave closed.
 }
 
-// Initialize dashboard progress on load
-document.addEventListener('DOMContentLoaded', () => {
-    // Allow time for DOM to settle
-    setTimeout(() => {
-        if (typeof updateDashboardProgress === 'function') {
-            updateDashboardProgress();
-        }
-        // Update header profile name
-        updateHeaderProfileName();
-    }, 500);
+// Make resetPracticeProgress globally available for Settings button
+window.resetPracticeProgress = resetPracticeProgress;
 
-    // Profile button event listener
-    const profileBtn = document.getElementById('profileBtn');
-    if (profileBtn) {
-        profileBtn.addEventListener('click', openProfileModal);
-    }
-
-    // Profile modal close button
-    const closeProfileModal = document.getElementById('closeProfileModal');
-    if (closeProfileModal) {
-        closeProfileModal.addEventListener('click', closeProfileModalFunc);
-    }
-
-    // Calibration button in profile modal
-    const openCalibrationBtn = document.getElementById('openCalibrationBtn');
-    if (openCalibrationBtn) {
-        openCalibrationBtn.addEventListener('click', () => {
-            closeProfileModalFunc();
-            openRangeCalibration();
-        });
-    }
-
-    // Singer dropdown for selecting existing profiles
-    const singerListSelect = document.getElementById('singerListSelect');
-    if (singerListSelect) {
-        singerListSelect.addEventListener('change', (e) => {
-            const selectedSinger = e.target.value;
-            if (selectedSinger) {
-                switchSinger(selectedSinger);
-            }
-        });
-    }
-
-    // Create new profile button
-    const createProfileBtn = document.getElementById('createProfileBtn');
-    if (createProfileBtn) {
-        createProfileBtn.addEventListener('click', () => {
-            const profileSingerInput = document.getElementById('profileSingerInput');
-            const newSinger = profileSingerInput.value.trim();
-            if (newSinger) {
-                switchSinger(newSinger);
-                profileSingerInput.value = '';
-            } else {
-                alert('Please enter a singer name.');
-            }
-        });
-    }
-
-    // Singer input for switching/creating profiles (Enter key)
-    const profileSingerInput = document.getElementById('profileSingerInput');
-    if (profileSingerInput) {
-        profileSingerInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const newSinger = profileSingerInput.value.trim();
-                if (newSinger) {
-                    switchSinger(newSinger);
-                    profileSingerInput.value = '';
-                }
-            }
-        });
-    }
-});
-
-// Update header profile name
-function updateHeaderProfileName() {
-    const headerName = document.getElementById('headerProfileName');
-    if (headerName) {
-        const singer = localStorage.getItem('pitchWizSinger') || currentSinger || 'Guest';
-        headerName.textContent = singer;
-        headerName.style.display = 'inline';
-    }
-    // Element removed from header - profile now in settings page
-}
-
-// Open Profile Modal
-async function openProfileModal() {
-    const modal = document.getElementById('profileModal');
-    const currentNameEl = document.getElementById('currentProfileName');
-    const statusEl = document.getElementById('profileCalibrationStatus');
-    const singerSelect = document.getElementById('singerListSelect');
-
-    if (!modal) return;
-
-    // Get current singer
-    const singer = localStorage.getItem('pitchWizSinger') || 'Guest';
-    if (currentNameEl) {
-        currentNameEl.textContent = singer;
-    }
-
-    // Check calibration status
-    const rangeData = localStorage.getItem('pitchWizRange');
-    if (statusEl) {
-        if (rangeData) {
-            try {
-                const range = JSON.parse(rangeData);
-                statusEl.textContent = `✓ ${range.min} - ${range.max}`;
-                statusEl.className = 'status-badge calibrated';
-            } catch (e) {
-                statusEl.textContent = 'Not Calibrated';
-                statusEl.className = 'status-badge';
-            }
-        } else {
-            statusEl.textContent = 'Not Calibrated';
-            statusEl.className = 'status-badge';
-        }
-    }
-
-    // Populate singer list from recordings
-    if (singerSelect && typeof dbManager !== 'undefined') {
-        try {
-            const recordings = await dbManager.getAllRecordings();
-
-
-            const singers = [...new Set(recordings.map(r => r.singer).filter(Boolean))].sort();
-
-
-            // Clear and repopulate
-            singerSelect.innerHTML = '<option value="">-- Select a singer --</option>';
-            singers.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s;
-                option.textContent = s;
-                if (s === singer) option.selected = true;
-                singerSelect.appendChild(option);
-            });
-        } catch (e) {
-            console.error('Error loading singers:', e);
-        }
-    }
-
-    modal.style.display = 'flex';
-}
-
-// Close Profile Modal
-function closeProfileModalFunc() {
-    const modal = document.getElementById('profileModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// Switch Singer Profile
-async function switchSinger(newSingerName) {
-    if (!newSingerName || newSingerName.trim() === '') {
-        alert('Please enter a valid singer name.');
-        return;
-    }
-
-    const previousSinger = localStorage.getItem('pitchWizSinger');
-
-    // Update current singer
-    localStorage.setItem('pitchWizSinger', newSingerName);
-    currentSinger = newSingerName;
-
-    console.log(`Switched profile from "${previousSinger}" to "${newSingerName}"`);
-
-    // Update header
-    updateHeaderProfileName();
-
-    // Load profile data
-    if (typeof dbManager !== 'undefined') {
-        const profile = await dbManager.getSingerProfile(newSingerName);
-        if (profile) {
-            // Update cached range
-            if (profile.lowestNote && profile.highestNote) {
-                localStorage.setItem('pitchWizRange', JSON.stringify({
-                    min: profile.lowestNote,
-                    max: profile.highestNote
-                }));
-            }
-
-            // Update practice view if visible
-            if (typeof displayRangeSummary === 'function') {
-                displayRangeSummary(profile);
-            }
-        } else {
-            // New profile - clear range
-            localStorage.removeItem('pitchWizRange');
-        }
-    }
-
-    // Reload dashboard and practice UI
-    if (typeof updateDashboardProgress === 'function') {
-        updateDashboardProgress();
-    }
-
-    // Close modal
-    closeProfileModalFunc();
-
-    alert(`✓ Switched to profile: ${newSingerName}`);
-
-    // Clear the input
-    const input = document.getElementById('profileSingerInput');
-    if (input) input.value = '';
-}
-
+// Global variable for Accuracy Chart instance
 let accuracyNoteChartInstance = null;
 
+// Render Accuracy per Note Chart
 function renderAccuracyChart(scores) {
     const ctx = document.getElementById('accuracyPerNoteChart');
     if (!ctx) return;
@@ -1699,7 +1924,7 @@ function renderAccuracyChart(scores) {
         return NOTE_COLORS[noteName] || '#999';
     });
 
-    // Border colors (slightly lighter/darker)
+    // Border colors
     const borderColors = notes.map(n => {
         return '#ffffff';
     });
@@ -1741,9 +1966,37 @@ function renderAccuracyChart(scores) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return `Accuracy: ${context.parsed.y}%`;
+                    enabled: false, // Disable default tooltip
+                    external: function (context) {
+                        // Get tooltip data
+                        const tooltipModel = context.tooltip;
+
+                        // Hide if no tooltip
+                        if (tooltipModel.opacity === 0) {
+                            hideNoteTooltip();
+                            return;
+                        }
+
+                        // Get the note and score data
+                        if (tooltipModel.dataPoints && tooltipModel.dataPoints.length > 0) {
+                            const dataPoint = tooltipModel.dataPoints[0];
+                            const note = notes[dataPoint.dataIndex];
+                            const scoreData = scores[note];
+
+                            // Create a fake element for positioning
+                            const chartArea = context.chart.canvas.getBoundingClientRect();
+                            const fakeElement = {
+                                getBoundingClientRect: () => ({
+                                    left: chartArea.left + dataPoint.element.x,
+                                    top: chartArea.top + dataPoint.element.y,
+                                    right: chartArea.left + dataPoint.element.x + dataPoint.element.width,
+                                    bottom: chartArea.top + dataPoint.element.y,
+                                    width: dataPoint.element.width,
+                                    height: 0
+                                })
+                            };
+
+                            showNoteTooltip(fakeElement, note, scoreData);
                         }
                     }
                 }
@@ -1751,3 +2004,66 @@ function renderAccuracyChart(scores) {
         }
     });
 }
+
+// Make renderAccuracyChart globally available
+window.renderAccuracyChart = renderAccuracyChart;
+
+// Tooltip helper functions
+function showNoteTooltip(noteElement, note, scoreData) {
+    const tooltip = document.getElementById('noteTooltip');
+    if (!tooltip) return;
+
+    const score = (typeof scoreData === 'object' && scoreData !== null) ? scoreData.score : scoreData;
+    const screenshot = (typeof scoreData === 'object' && scoreData !== null) ? scoreData.screenshot : null;
+
+    // Update tooltip content
+    tooltip.querySelector('.tooltip-note').textContent = note;
+    tooltip.querySelector('.tooltip-score').textContent = score ? `${score}%` : '0%';
+
+    const img = tooltip.querySelector('.tooltip-screenshot');
+    if (screenshot) {
+        img.src = screenshot;
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+
+    // Position tooltip near the element
+    const rect = noteElement.getBoundingClientRect();
+    const tooltipWidth = 350; // max-width
+    const tooltipHeight = screenshot ? 250 : 60; // approximate
+
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    let top = rect.bottom + 10;
+
+    // Keep tooltip on screen
+    if (left < 10) left = 10;
+    if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
+    if (top + tooltipHeight > window.innerHeight - 10) top = rect.top - tooltipHeight - 10;
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+
+    // Use display and class for smooth fade
+    tooltip.style.display = 'block';
+    // Force reflow to ensure transition works
+    tooltip.offsetHeight;
+    tooltip.classList.add('show');
+}
+
+function hideNoteTooltip() {
+    const tooltip = document.getElementById('noteTooltip');
+    if (tooltip) {
+        tooltip.classList.remove('show');
+        // Hide after transition completes
+        setTimeout(() => {
+            if (!tooltip.classList.contains('show')) {
+                tooltip.style.display = 'none';
+            }
+        }, 200);
+    }
+}
+
+// Make tooltip functions globally available
+window.showNoteTooltip = showNoteTooltip;
+window.hideNoteTooltip = hideNoteTooltip;

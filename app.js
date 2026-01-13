@@ -574,6 +574,33 @@ function init() {
         });
     }
 
+    // Practice Count-in checkbox
+    const practiceCountInCheckbox = document.getElementById('practiceCountIn');
+    if (practiceCountInCheckbox) {
+        const savedCountIn = localStorage.getItem('pitchWiz_practiceCountIn');
+        practiceCountInCheckbox.checked = savedCountIn !== 'false'; // Default true
+
+        practiceCountInCheckbox.addEventListener('change', (e) => {
+            localStorage.setItem('pitchWiz_practiceCountIn', e.target.checked);
+        });
+    }
+
+    // Practice Recording Duration slider
+    const practiceRecordDurationInput = document.getElementById('practiceRecordDuration');
+    const practiceRecordDurationValue = document.getElementById('practiceRecordDurationValue');
+    if (practiceRecordDurationInput && practiceRecordDurationValue) {
+        const savedDuration = localStorage.getItem('pitchWiz_practiceRecordDuration') || '3';
+        practiceRecordDurationInput.value = savedDuration;
+        practiceRecordDurationValue.textContent = savedDuration;
+
+        practiceRecordDurationInput.addEventListener('input', (e) => {
+            const duration = e.target.value;
+            practiceRecordDurationValue.textContent = duration;
+            localStorage.setItem('pitchWiz_practiceRecordDuration', duration);
+        });
+    }
+
+
     // Main UI waveform gain slider
     const waveformGainMainInput = document.getElementById('waveformGainMain');
     const waveformGainMainValue = document.getElementById('waveformGainMainValue');
@@ -832,7 +859,7 @@ function init() {
         }
 
         // Check if name already exists
-        const profiles = await dbManager.getAllSingerProfiles();
+        const profiles = await dbManager.getAllProfiles();
         if (profiles.some(p => p.name === name.trim())) {
             alert('A profile with this name already exists!');
             return;
@@ -2260,18 +2287,39 @@ async function updateProgressUI() {
             }
         });
 
-        singerSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Group sessions by date and calculate daily averages
+        const sessionsByDate = new Map();
+        singerSessions.forEach(session => {
+            if (!sessionsByDate.has(session.date)) {
+                sessionsByDate.set(session.date, []);
+            }
+            sessionsByDate.get(session.date).push(session.accuracy);
+        });
+
+        // Calculate daily averages
+        const aggregatedData = Array.from(sessionsByDate.entries()).map(([date, accuracies]) => ({
+            date,
+            avgAccuracy: Math.round(accuracies.reduce((sum, acc) => sum + acc, 0) / accuracies.length),
+            sessionCount: accuracies.length
+        }));
+
+        // Sort by date
+        aggregatedData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         accuracyChartInstance = new Chart(ctx, {
-            type: 'bar',
+            type: 'line', // Changed from 'bar' to 'line' for trend visualization
             data: {
-                labels: singerSessions.map(s => s.date),
+                labels: aggregatedData.map(d => d.date),
                 datasets: [{
-                    label: `${selectedSinger} - Accuracy per Session`,
-                    data: singerSessions.map(s => s.accuracy),
-                    backgroundColor: singerColors[0],
+                    label: `${selectedSinger} - Daily Average Accuracy`,
+                    data: aggregatedData.map(d => d.avgAccuracy),
+                    backgroundColor: 'rgba(162, 155, 254, 0.2)',
                     borderColor: singerColors[0],
-                    borderWidth: 2
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3, // Smooth line
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
@@ -2298,6 +2346,15 @@ async function updateProgressUI() {
                     legend: {
                         display: true,
                         labels: { color: '#dfe6e9' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function (context) {
+                                const dataIndex = context.dataIndex;
+                                const sessionCount = aggregatedData[dataIndex].sessionCount;
+                                return sessionCount > 1 ? `${sessionCount} sessions averaged` : '1 session';
+                            }
+                        }
                     }
                 }
             }

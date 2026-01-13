@@ -604,6 +604,24 @@
                         </div>
                     </div>
 
+                    <h3 class="section-title">Practice Settings</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="practiceCountIn" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Count-in Before Recording</span>
+                            </label>
+                            <span class="setting-hint">Show countdown before recording starts</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="practiceRecordDuration">Recording Duration: <span
+                                    id="practiceRecordDurationValue">3</span>s</label>
+                            <input type="range" id="practiceRecordDuration" min="1" max="5" value="3" step="1">
+                            <span class="setting-hint">How long to record each note (1-5 seconds)</span>
+                        </div>
+                    </div>
+
                     <h3 class="section-title">Practice Progress</h3>
                     <div class="settings-grid">
                         <div class="setting-item">
@@ -615,6 +633,16 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+
+        <!-- Note Tooltip (for hover previews) -->
+        <div id="noteTooltip" class="note-tooltip" style="display: none;">
+            <div class="tooltip-header">
+                <span class="tooltip-note"></span>
+                <span class="tooltip-score"></span>
+            </div>
+            <img class="tooltip-screenshot" alt="Pitch diagram" style="display: none;">
         </div>
 
 
@@ -853,17 +881,17 @@
             </div>
 
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="db-manager.js"></script>
-            <script src="recording-manager.js"></script>
-            <script src="progress-tracker.js"></script>
-            <script src="tone-generator.js"></script>
-            <script src="pitch-detector.js"></script>
-            <script src="visualizer.js"></script>
-            <script src="practice-functions.js"></script>
-            <script src="app.js"></script>
-            <script src="interval-functions.js"></script>
-            <script src="practice-integration.js"></script>
-            <script src="export-import.js"></script>
+            <script src="db-manager.js?v=3"></script>
+            <script src="recording-manager.js?v=3"></script>
+            <script src="progress-tracker.js?v=3"></script>
+            <script src="tone-generator.js?v=3"></script>
+            <script src="pitch-detector.js?v=3"></script>
+            <script src="visualizer.js?v=3"></script>
+            <script src="practice-functions.js?v=12"></script>
+            <script src="app.js?v=4"></script>
+            <script src="interval-functions.js?v=3"></script>
+            <script src="practice-integration.js?v=3"></script>
+            <script src="export-import.js?v=3"></script>
 
             <!-- Service Worker Registration -->
             <script>
